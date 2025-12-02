@@ -1,5 +1,4 @@
-import React from 'react';
-import { Gift } from 'lucide-react';
+import Header from './Header';
 import Footer from './Footer';
 import RecuperarCodigo from './RecuperarCodigo';
 
@@ -7,12 +6,8 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
-        <div className="text-center mb-8">
-          <Gift className="w-16 h-16 mx-auto text-red-500 mb-4" />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Amigo Secreto</h1>
-          <p className="text-gray-600">Organize seu amigo secreto de forma simples</p>
-        </div>
-        
+        <Header />
+
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
           <button
             onClick={() => setView('criar')}
@@ -20,7 +15,7 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
           >
             Criar Novo Evento
           </button>
-          
+
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
@@ -29,7 +24,7 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
               <span className="px-2 bg-white text-gray-500">ou</span>
             </div>
           </div>
-          
+
           <div>
             <input
               type="text"
@@ -48,8 +43,8 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
             <RecuperarCodigo recuperarPorCelular={recuperarPorCelular} loading={loading} />
           </div>
         </div>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 }

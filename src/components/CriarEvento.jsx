@@ -42,7 +42,7 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
       setValorSugerido('');
       setView('admin');
     } catch (error) {
-      alert('Erro ao criar evento. Tente novamente.');
+      alert('Erro ao criar evento. Tente novamente.', error);
     }
   };
   

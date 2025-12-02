@@ -1,5 +1,6 @@
 import { Gift, Send } from 'lucide-react';
 // import { gerarLinkWhatsApp } from '../utils/helpers';
+import Header from './Header';
 import Footer from './Footer';
 import CopyButton from './BotaoCopiar';
 
@@ -17,6 +18,7 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
+      <Header />
         <button
           onClick={() => {
             setView('home');
@@ -28,7 +30,6 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
           ← Voltar
         </button>
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <Gift className="w-16 h-16 mx-auto text-red-500 mb-4" />
           <h2 className="text-2xl font-bold text-gray-800 mb-6">{eventoAtual.nome}</h2>
 
           <div className="space-y-4">
