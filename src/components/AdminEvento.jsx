@@ -1,7 +1,9 @@
 // src/components/AdminEvento.jsx
+import React, { useState, useEffect } from 'react';
 import { Users, Shuffle, Trash, Trash2, Send } from 'lucide-react';
 import { contarTotalParticipantes } from '../utils/helpers';
 import { realizarSorteio } from '../utils/sorteio';
+import Header from './Header';
 import Footer from './Footer';
 import CopyButton from './BotaoCopiar';
 import Spinner from './Spinner';
@@ -14,8 +16,16 @@ export default function AdminEvento({
   setView,
   loading
 }) {
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
   const participantes = eventoAtual?.participantes || [];
+  const totalParticipants = participantes.length;
+  const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const sorteado = !!eventoAtual?.sorteado;
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalParticipants, totalPages, page]);
 
   const excluirParticipante = async (participanteId) => {
     if (!confirm('Tem certeza que deseja excluir este participante?')) {
@@ -100,6 +110,7 @@ export default function AdminEvento({
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-2xl mx-auto pt-12">
+      <Header />
         <button
           onClick={() => setView('home')}
           className="mb-4 text-gray-600 hover:text-gray-800"
@@ -131,69 +142,87 @@ export default function AdminEvento({
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({contarTotalParticipantes(participantes)} no total)
+              Participantes ({contarTotalParticipantes(participantes)}, incluindo filhos)
             </h3>
 
             {participantes.length === 0 ? (
               <p className="text-gray-500 text-sm">Nenhum participante ainda. Compartilhe o código {eventoAtual.codigo}</p>
             ) : (
               <div className="space-y-3">
-                {participantes.map(p => (
-                  <div key={p.id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-800">{p.nome}</p>
-                        <p className="text-sm text-gray-600">{p.celular}</p>
-                        {p.filhos && p.filhos.length > 0 && (
-                          <p className="text-sm text-gray-500">Filhos: {p.filhos.join(', ')}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                          {p.codigoAcesso}
-                        </span>
-                        {!eventoAtual.sorteado && (
-                          <button
-                            onClick={() => excluirParticipante(p.id)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Excluir participante"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {sorteado && (
-                      <div className="space-y-1 pt-2 border-t">
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm">
-                            <strong>{p.nome}</strong> tirou: {eventoAtual.sorteio[p.nome]}
-                          </p>
-                          {/* <button
-                            onClick={() => enviarWhatsApp(p.nome, sorteio[p.nome], p.celular)}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button> */}
+                {(() => {
+                  const start = (page - 1) * pageSize;
+                  const end = Math.min(start + pageSize, totalParticipants);
+                  const pageItems = participantes.slice(start, end);
+                  return pageItems.map(p => (
+                    <div key={p.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{p.nome}</p>
+                          <p className="text-sm text-gray-600">{p.celular}</p>
+                          {p.filhos && p.filhos.length > 0 && (
+                            <p className="text-sm text-gray-500">Filhos: {p.filhos.join(', ')}</p>
+                          )}
                         </div>
-                        {p.filhos && p.filhos.map(filho => (
-                          <div key={filho} className="flex justify-between items-center">
-                            <p className="text-sm">
-                              <strong>{filho}</strong> tirou: {eventoAtual.sorteio[filho]}
-                            </p>
-                            {/* <button
-                              onClick={() => enviarWhatsApp(filho, sorteio[filho], p.celular)}
-                              className="text-green-600 hover:text-green-700"
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {p.codigoAcesso}
+                          </span>
+                          {!eventoAtual.sorteado && (
+                            <button
+                              onClick={() => excluirParticipante(p.id)}
+                              className="text-red-500 hover:text-red-700"
+                              title="Excluir participante"
                             >
-                              <Send className="w-4 h-4" />
-                            </button> */}
-                          </div>
-                        ))}
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
+
+                      {sorteado && (
+                        <div className="space-y-1 pt-2 border-t">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm">
+                              <strong>{p.nome}</strong> tirou: {eventoAtual.sorteio[p.nome]}
+                            </p>
+                          </div>
+                          {p.filhos && p.filhos.map(filho => (
+                            <div key={filho} className="flex justify-between items-center">
+                              <p className="text-sm">
+                                <strong>{filho}</strong> tirou: {eventoAtual.sorteio[filho]}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ));
+                })()}
+
+                {totalParticipants > pageSize && (
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-600">
+                      Mostrando {Math.min((page - 1) * pageSize + 1, totalParticipants)} - {Math.min(page * pageSize, totalParticipants)} de {totalParticipants}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                        disabled={page === 1}
+                        className={`px-3 py-1 rounded ${page === 1 ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
+                      >
+                        Anterior
+                      </button>
+                      <div className="text-sm text-gray-700">{page} / {totalPages}</div>
+                      <button
+                        onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={page === totalPages}
+                        className={`px-3 py-1 rounded ${page === totalPages ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
+                      >
+                        Próximo
+                      </button>
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -249,8 +278,8 @@ export default function AdminEvento({
             </button>
           </div>
         </div>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 };
