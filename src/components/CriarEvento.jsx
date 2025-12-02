@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { gerarCodigo, hashCode } from '../utils/helpers';
+import Header from './Header';
 import Footer from './Footer';
 
 export default function CriarEvento({ setView, eventos, setEventos, setEventoAtual }) {
@@ -49,6 +50,7 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
+        <Header />
         <button
           onClick={() => setView('home')}
           className="mb-4 text-gray-600 hover:text-gray-800"
