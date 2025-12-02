@@ -34,7 +34,7 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
             />
             <button
-              onClick={acessarEvento}
+              onClick={() => acessarEvento()}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
             >
               {loading ? 'Carregando...' : 'Acessar Evento'}

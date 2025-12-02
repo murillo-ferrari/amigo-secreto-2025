@@ -8,11 +8,11 @@ import CopyButton from './BotaoCopiar';
 import Spinner from './Spinner';
 import QRCodeCard from './QRCodeCard';
 
-export default function EventoParticipante({ 
-  eventoAtual, 
-  setEventoAtual, 
-  eventos, 
-  setEventos, 
+export default function EventoParticipante({
+  eventoAtual,
+  setEventoAtual,
+  eventos,
+  setEventos,
   setView,
   nomeParticipante,
   setNomeParticipante,
@@ -32,19 +32,19 @@ export default function EventoParticipante({
   const [codigoParticipante, setCodigoParticipante] = useState('');
   const participantes = eventoAtual?.participantes || [];
   const hasAnyFilhos = participantes.some(p => p.filhos && p.filhos.length > 0);
-  
+
   const handleCelularChange = (e) => {
     const valorFormatado = formatarCelular(e.target.value);
     setCelular(valorFormatado);
   };
-  
+
   const adicionarFilho = () => {
     if (nomeFilho.trim()) {
       setFilhos([...filhos, { nome: nomeFilho.trim(), presentes: [] }]);
       setNomeFilho('');
     }
   };
-  
+
   const removerFilho = (index) => {
     setFilhos(filhos.filter((_, i) => i !== index));
   };
@@ -81,40 +81,40 @@ export default function EventoParticipante({
   const removerPresente = (index) => {
     setPresentes(presentes.filter((_, i) => i !== index));
   };
-  
+
   const cadastrarParticipante = async () => {
     if (!nomeParticipante.trim() || !celular.trim()) {
       alert('Preencha nome e celular!');
       return;
     }
-    
+
     // Valida o número de celular
     const validacao = validarCelular(celular);
     if (!validacao.valido) {
       alert(validacao.erro);
       return;
     }
-    
+
     const participantes = eventoAtual.participantes || [];
-    
+
     // Verifica se é edição de participante existente
-    const participanteExistente = participantes.find(p => 
+    const participanteExistente = participantes.find(p =>
       p.nome === nomeParticipante.trim() || p.celular === celular.trim()
     );
-    
+
     let eventoAtualizado;
     let codigoAcessoGerado;
-    
-      // normalize filhos to objects before saving
-      const filhosNormalizados = (filhos || []).map(f => typeof f === 'string' ? { nome: f, presentes: [] } : { nome: f.nome, presentes: f.presentes || [] });
 
-      if (participanteExistente) {
+    // normalize filhos to objects before saving
+    const filhosNormalizados = (filhos || []).map(f => typeof f === 'string' ? { nome: f, presentes: [] } : { nome: f.nome, presentes: f.presentes || [] });
+
+    if (participanteExistente) {
       // Atualiza participante existente
       codigoAcessoGerado = participanteExistente.codigoAcesso;
       eventoAtualizado = {
         ...eventoAtual,
-        participantes: participantes.map(p => 
-          p.id === participanteExistente.id 
+        participantes: participantes.map(p =>
+          p.id === participanteExistente.id
             ? { ...p, nome: nomeParticipante.trim(), celular: celular.trim(), filhos: [...filhosNormalizados], presentes: [...presentes] }
             : p
         )
@@ -126,22 +126,22 @@ export default function EventoParticipante({
         id: gerarCodigo(),
         nome: nomeParticipante.trim(),
         celular: celular.trim(),
-          filhos: [...filhosNormalizados],
-          presentes: [...presentes],
+        filhos: [...filhosNormalizados],
+        presentes: [...presentes],
         codigoAcesso: codigoAcessoGerado
       };
-      
+
       eventoAtualizado = {
         ...eventoAtual,
         participantes: [...participantes, novoParticipante]
       };
     }
-    
+
     try {
       await window.storage.set(`evento:${eventoAtual.codigo}`, JSON.stringify(eventoAtualizado));
       setEventoAtual(eventoAtualizado);
-      setEventos({...eventos, [eventoAtual.codigo]: eventoAtualizado});
-      
+      setEventos({ ...eventos, [eventoAtual.codigo]: eventoAtualizado });
+
       // Mostra o código na tela
       setCodigoCadastro(codigoAcessoGerado);
       // Mensagem diferente se foi atualização ou novo cadastro
@@ -150,7 +150,7 @@ export default function EventoParticipante({
       } else {
         setSuccessMessage('✓ Cadastrado com sucesso!');
       }
-      
+
       setNomeParticipante('');
       setCelular('');
       setFilhos([]);
@@ -159,45 +159,38 @@ export default function EventoParticipante({
       alert('Erro ao cadastrar. Tente novamente.', error);
     }
   };
-  
+
   const verResultado = () => {
     const participantes = eventoAtual.participantes || [];
     const participante = participantes.find(
       p => p.codigoAcesso === codigoParticipante.toUpperCase()
     );
-    
+
     if (!participante) {
       alert('Código inválido!');
       return;
     }
-    
-    setEventoAtual({...eventoAtual, participanteAtual: participante});
+
+    setEventoAtual({ ...eventoAtual, participanteAtual: participante });
     setView('resultado');
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
-      <Header />
+        <Header />
         <button
           onClick={() => setView('home')}
           className="mb-4 text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">{eventoAtual.nome}</h2>
           {eventoAtual.valorSugerido && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">Valor sugerido: <span className="font-bold">R$ {eventoAtual.valorSugerido}</span></p>
-            </div>
-          )}
-
-          {/* Show QR if this view was opened as event (no participant prefilled) and not yet sorteado */}
-          {eventoAtual && !eventoAtual.sorteado && nomeParticipante === '' && (
-            <div className="mb-4">
-              <QRCodeCard url={`${window.location.origin}?code=${eventoAtual.codigo}`} label="Compartilhe este evento" size={200} />
             </div>
           )}
 
@@ -207,7 +200,7 @@ export default function EventoParticipante({
               <Spinner size={40} />
             </div>
           )}
-          
+
           {!eventoAtual.sorteado ? (
             <div className="space-y-4">
               {codigoCadastro && (
@@ -220,7 +213,7 @@ export default function EventoParticipante({
                   </div>
                 </div>
               )}
-              
+
               {!codigoCadastro && (
                 <>
                   <div>
@@ -235,7 +228,7 @@ export default function EventoParticipante({
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       WhatsApp (com DDD)
@@ -287,7 +280,7 @@ export default function EventoParticipante({
                       </div>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Filhos (sem celular)
@@ -308,7 +301,7 @@ export default function EventoParticipante({
                         <Plus className="w-5 h-5" />
                       </button>
                     </div>
-                    
+
                     {filhos.length > 0 && (
                       <div className="space-y-2">
                         {filhos.map((filho, index) => {
@@ -363,17 +356,24 @@ export default function EventoParticipante({
                       </div>
                     )}
                   </div>
-                  
                   <button
                     onClick={cadastrarParticipante}
                     className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
                   >
-                    {eventoAtual.participantes?.some(p => p.nome === nomeParticipante.trim() || p.celular === celular.trim()) 
-                      ? 'Atualizar Cadastro' 
+                    {eventoAtual.participantes?.some(p => p.nome === nomeParticipante.trim() || p.celular === celular.trim())
+                      ? 'Atualizar Cadastro'
                       : 'Cadastrar'}
                   </button>
-                  
-                  <div className="pt-4 border-t">
+
+
+                  {/* Show QR if this view was opened as event (no participant prefilled) and not yet sorteado */}
+                  {eventoAtual && !eventoAtual.sorteado && nomeParticipante === '' && (
+                    <div className="py-4">
+                      <QRCodeCard url={`${window.location.origin}?code=${eventoAtual.codigo}`} label="Compartilhe este evento" size={200} eventName={eventoAtual.nome} />
+                    </div>
+                  )}
+
+                  <div>
                     <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
                       Participantes: {contarTotalParticipantes(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''}
                     </p>
@@ -383,22 +383,22 @@ export default function EventoParticipante({
                         .sort((a, b) => a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' }))
                         .map(p => (
                           <div key={p.id} className="text-sm text-gray-700">
-                              {p.nome} {p.filhos && p.filhos.length > 0 && `(+ ${p.filhos.map(f => typeof f === 'string' ? f : f.nome).join(', ')})`}
-                              {p.presentes && p.presentes.length > 0 && (
-                                <div className="text-xs text-gray-500 mt-1">Sugestões: {p.presentes.join(', ')}</div>
-                              )}
-                              {p.filhos && p.filhos.length > 0 && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {p.filhos.map((f, i) => {
-                                    const filhoObj = typeof f === 'string' ? null : f;
-                                    const nomeFilho = filhoObj ? filhoObj.nome : f;
-                                    const presentesFilho = filhoObj ? (filhoObj.presentes || []) : [];
-                                    return presentesFilho.length > 0 ? (
-                                      <div key={i}>Sugestões ({nomeFilho}): {presentesFilho.join(', ')}</div>
-                                    ) : null;
-                                  })}
-                                </div>
-                              )}
+                            {p.nome} {p.filhos && p.filhos.length > 0 && `(+ ${p.filhos.map(f => typeof f === 'string' ? f : f.nome).join(', ')})`}
+                            {p.presentes && p.presentes.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">Sugestões: {p.presentes.join(', ')}</div>
+                            )}
+                            {p.filhos && p.filhos.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {p.filhos.map((f, i) => {
+                                  const filhoObj = typeof f === 'string' ? null : f;
+                                  const nomeFilho = filhoObj ? filhoObj.nome : f;
+                                  const presentesFilho = filhoObj ? (filhoObj.presentes || []) : [];
+                                  return presentesFilho.length > 0 ? (
+                                    <div key={i}>Sugestões ({nomeFilho}): {presentesFilho.join(', ')}</div>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
                           </div>
                         ))}
                     </div>
@@ -411,7 +411,7 @@ export default function EventoParticipante({
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                 <p className="text-green-800 font-semibold">Sorteio já realizado!</p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Digite seu código de acesso

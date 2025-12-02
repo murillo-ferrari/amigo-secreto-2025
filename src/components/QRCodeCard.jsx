@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import CopyButton from './BotaoCopiar';
 
-export default function QRCodeCard({ url, label = 'Compartilhar evento', size = 300 }) {
+export default function QRCodeCard({ url, label = 'Compartilhar evento', size = 300, eventName = '' }) {
   const [downloading, setDownloading] = useState(false);
 
   if (!url) return null;
@@ -15,7 +16,18 @@ export default function QRCodeCard({ url, label = 'Compartilhar evento', size = 
       const href = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = href;
-      a.download = `evento_qr.png`;
+      // Create a sanitized file name using the event name when available
+      const baseName = eventName || 'evento';
+      const sanitize = (s) => s
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9 _-]/g, '')
+        .trim()
+        .replace(/[\s-]+/g, '_');
+      const filename = `${sanitize(baseName)}_qr.png`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -28,27 +40,15 @@ export default function QRCodeCard({ url, label = 'Compartilhar evento', size = 
     }
   };
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      alert('Link copiado para a área de transferência!');
-    } catch (err) {
-      console.error('Erro ao copiar link:', err);
-      alert('Não foi possível copiar o link.');
-    }
-  };
-
   return (
     <div className="bg-white border rounded-lg p-4 text-center">
       <p className="font-semibold text-gray-800 mb-2">{label}</p>
       <img src={qrSrc} alt="QR Code" width={size} height={size} className="mx-auto mb-3" />
       <div className="flex items-center justify-center gap-2">
-        <button onClick={downloadQR} disabled={downloading} className="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
+        <button onClick={downloadQR} disabled={downloading} className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
           {downloading ? 'Baixando...' : 'Baixar QR'}
         </button>
-        <button onClick={copyLink} className="bg-gray-100 px-3 py-2 rounded hover:bg-gray-200">
-          Copiar link
-        </button>
+        <CopyButton text={url} className="px-3 py-2" label="Copiar link" copiedLabel="Link copiado!" />
       </div>
     </div>
   );
