@@ -21,7 +21,23 @@ export default function AmigoSecreto() {
   const [presentes, setPresentes] = useState([]);
   
   useEffect(() => {
-    carregarEventos();
+    // On mount, load events and, if a ?code=... query param is present,
+    // try to open that event automatically (useful for QR links).
+    const init = async () => {
+      await carregarEventos();
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const codeParam = params.get('code');
+        if (codeParam) {
+          // Try to access event using the code from URL
+          await acessarEvento(codeParam);
+        }
+      } catch (err) {
+        console.error('Erro ao processar query params:', err);
+      }
+    };
+
+    init();
   }, []);
   
   const carregarEventos = async () => {
@@ -45,9 +61,9 @@ export default function AmigoSecreto() {
     }
   };
   
-  const acessarEvento = async () => {
+  const acessarEvento = async (codeArg) => {
     setLoading(true);
-    const codigo = codigoAcesso.toUpperCase();
+    const codigo = (codeArg || codigoAcesso || '').toUpperCase();
     
     try {
       // Primeiro tenta acessar diretamente como código do evento

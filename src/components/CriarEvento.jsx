@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { gerarCodigo, hashCode } from '../utils/helpers';
 import Header from './Header';
 import Footer from './Footer';
+import QRCodeCard from './QRCodeCard';
 
 export default function CriarEvento({ setView, eventos, setEventos, setEventoAtual }) {
   const [nomeEvento, setNomeEvento] = useState('');
   const [valorSugerido, setValorSugerido] = useState('');
+  const [createdEvento, setCreatedEvento] = useState(null);
   
   const criarEvento = async () => {
     if (!nomeEvento.trim()) {
@@ -41,7 +43,8 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
       setEventoAtual(novoEvento); // Mantém o código em texto para a sessão atual
       setNomeEvento('');
       setValorSugerido('');
-      setView('admin');
+      // Show QR on create screen first
+      setCreatedEvento(novoEvento);
     } catch (error) {
       alert('Erro ao criar evento. Tente novamente.', error);
     }
@@ -61,40 +64,52 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Criar Evento</h2>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nome do Evento
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Amigo Secreto da Família 2024"
-                value={nomeEvento}
-                onChange={(e) => setNomeEvento(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+          {!createdEvento ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome do Evento
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Amigo Secreto da Família 2024"
+                  value={nomeEvento}
+                  onChange={(e) => setNomeEvento(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor Sugerido (opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: 50,00"
+                  value={valorSugerido}
+                  onChange={(e) => setValorSugerido(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              
+              <button
+                onClick={criarEvento}
+                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
+              >
+                Criar Evento
+              </button>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Valor Sugerido (opcional)
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: 50,00"
-                value={valorSugerido}
-                onChange={(e) => setValorSugerido(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              />
+          ) : (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">Evento criado</h3>
+              <p className="text-sm text-gray-600 mb-3">Código de participantes: <strong>{createdEvento.codigo}</strong></p>
+              <QRCodeCard url={`${window.location.origin}?code=${createdEvento.codigo}`} label="Compartilhe o evento via QR" />
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => setView('admin')} className="flex-1 bg-green-600 text-white py-2 rounded">Ir para Admin</button>
+                <button onClick={() => { setCreatedEvento(null); }} className="flex-1 bg-gray-100 py-2 rounded">Fechar</button>
+              </div>
             </div>
-            
-            <button
-              onClick={criarEvento}
-              className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
-            >
-              Criar Evento
-            </button>
-          </div>
+          )}
         </div>
       </div>
       <Footer />

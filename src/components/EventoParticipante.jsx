@@ -6,6 +6,7 @@ import Header from './Header';
 import Footer from './Footer';
 import CopyButton from './BotaoCopiar';
 import Spinner from './Spinner';
+import QRCodeCard from './QRCodeCard';
 
 export default function EventoParticipante({ 
   eventoAtual, 
@@ -190,6 +191,13 @@ export default function EventoParticipante({
           {eventoAtual.valorSugerido && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">Valor sugerido: <span className="font-bold">R$ {eventoAtual.valorSugerido}</span></p>
+            </div>
+          )}
+
+          {/* Show QR if this view was opened as event (no participant prefilled) and not yet sorteado */}
+          {eventoAtual && !eventoAtual.sorteado && nomeParticipante === '' && (
+            <div className="mb-4">
+              <QRCodeCard url={`${window.location.origin}?code=${eventoAtual.codigo}`} label="Compartilhe este evento" size={200} />
             </div>
           )}
 
