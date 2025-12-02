@@ -1,5 +1,5 @@
 // src/components/AdminEvento.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Users, Shuffle, Trash, Trash2, Send } from 'lucide-react';
 import { contarTotalParticipantes } from '../utils/helpers';
 import { realizarSorteio } from '../utils/sorteio';
@@ -24,9 +24,9 @@ export default function AdminEvento({
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const sorteado = !!eventoAtual?.sorteado;
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [totalParticipants, totalPages, page]);
+  // Avoid calling setState synchronously in an effect (can trigger cascading renders).
+  // Instead derive the effective page to render from state and bounds.
+  const currentPage = Math.min(Math.max(1, page), totalPages);
 
   const excluirParticipante = async (participanteId) => {
     if (!confirm('Tem certeza que deseja excluir este participante?')) {
@@ -151,7 +151,7 @@ export default function AdminEvento({
             ) : (
               <div className="space-y-3">
                 {(() => {
-                  const start = (page - 1) * pageSize;
+                  const start = (currentPage - 1) * pageSize;
                   const end = Math.min(start + pageSize, totalParticipants);
                   const pageItems = participantes.slice(start, end);
                   return pageItems.map(p => (
@@ -203,21 +203,21 @@ export default function AdminEvento({
                 {totalParticipants > pageSize && (
                   <div className="flex items-center justify-between mt-4">
                     <div className="text-sm text-gray-600">
-                      Mostrando {Math.min((page - 1) * pageSize + 1, totalParticipants)} - {Math.min(page * pageSize, totalParticipants)} de {totalParticipants}
+                      Mostrando {Math.min((currentPage - 1) * pageSize + 1, totalParticipants)} - {Math.min(currentPage * pageSize, totalParticipants)} de {totalParticipants}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                        disabled={page === 1}
-                        className={`px-3 py-1 rounded ${page === 1 ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
                       >
                         Anterior
                       </button>
                       <div className="text-sm text-gray-700">{page} / {totalPages}</div>
                       <button
                         onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={page === totalPages}
-                        className={`px-3 py-1 rounded ${page === totalPages ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
+                        disabled={currentPage === totalPages}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-200 text-gray-400' : 'bg-white border'}`}
                       >
                         Próximo
                       </button>
@@ -242,8 +242,8 @@ export default function AdminEvento({
           {eventoAtual.sorteado && (
             <div className="space-y-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <p className="text-green-800 font-semibold mb-2">✓ Sorteio realizado!</p>
-                <p className="text-sm text-green-700">Clique nos ícones de envio para compartilhar via WhatsApp</p>
+                <p className="text-green-800 font-semibold">✓ Sorteio realizado com sucesso!</p>
+                {/* <p className="text-sm text-green-700">Clique nos ícones de envio para compartilhar via WhatsApp</p> */}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
