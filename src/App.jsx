@@ -18,6 +18,7 @@ export default function AmigoSecreto() {
   const [nomeParticipante, setNomeParticipante] = useState('');
   const [celular, setCelular] = useState('');
   const [filhos, setFilhos] = useState([]);
+  const [presentes, setPresentes] = useState([]);
   
   useEffect(() => {
     carregarEventos();
@@ -111,6 +112,7 @@ export default function AmigoSecreto() {
             setNomeParticipante(participanteEncontrado.nome);
             setCelular(participanteEncontrado.celular);
             setFilhos(participanteEncontrado.filhos || []);
+            setPresentes(participanteEncontrado.presentes || []);
             setView('evento');
           }
         }
@@ -120,6 +122,7 @@ export default function AmigoSecreto() {
           setNomeParticipante('');
           setCelular('');
           setFilhos([]);
+          setPresentes([]);
           setView('evento');
         }
         setCodigoAcesso('');
@@ -168,6 +171,7 @@ export default function AmigoSecreto() {
           setNomeParticipante(participante.nome || '');
           setCelular(participante.celular || '');
           setFilhos(participante.filhos || []);
+          setPresentes(participante.presentes || []);
           setView('evento');
           setCodigoAcesso('');
           return;
@@ -221,6 +225,8 @@ export default function AmigoSecreto() {
         setCelular={setCelular}
         filhos={filhos}
         setFilhos={setFilhos}
+        presentes={presentes}
+        setPresentes={setPresentes}
         loading={loading}
       />
     );

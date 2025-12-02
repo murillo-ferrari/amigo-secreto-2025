@@ -21,7 +21,9 @@ export const realizarSorteio = async (eventoAtual, setEventoAtual, eventos, setE
     todosParticipantes.push({ nome: p.nome, responsavel: p.id });
     if (p.filhos && p.filhos.length > 0) {
       p.filhos.forEach(f => {
-        todosParticipantes.push({ nome: f, responsavel: p.id });
+        // filhos may be strings (old shape) or objects { nome, presentes }
+        const nomeFilho = typeof f === 'string' ? f : (f && f.nome ? f.nome : String(f));
+        todosParticipantes.push({ nome: nomeFilho, responsavel: p.id });
       });
     }
   });

@@ -18,8 +18,12 @@ export default function EventoParticipante({
   celular,
   setCelular,
   filhos,
-  setFilhos
+  setFilhos,
+  presentes,
+  setPresentes
 }) {
+  const [novoPresente, setNovoPresente] = useState('');
+  const [novoPresenteFilhos, setNovoPresenteFilhos] = useState({});
   // support loading prop if passed
   const [nomeFilho, setNomeFilho] = useState('');
   const [codigoCadastro, setCodigoCadastro] = useState(null);
@@ -35,13 +39,46 @@ export default function EventoParticipante({
   
   const adicionarFilho = () => {
     if (nomeFilho.trim()) {
-      setFilhos([...filhos, nomeFilho.trim()]);
+      setFilhos([...filhos, { nome: nomeFilho.trim(), presentes: [] }]);
       setNomeFilho('');
     }
   };
   
   const removerFilho = (index) => {
     setFilhos(filhos.filter((_, i) => i !== index));
+  };
+
+  const adicionarPresente = () => {
+    if (novoPresente.trim()) {
+      setPresentes([...presentes, novoPresente.trim()]);
+      setNovoPresente('');
+    }
+  };
+
+  const adicionarPresenteFilho = (index) => {
+    const val = (novoPresenteFilhos[index] || '').trim();
+    if (!val) return;
+    const updated = filhos.map((f, i) => {
+      if (i !== index) return f;
+      if (typeof f === 'string') return { nome: f, presentes: [val] };
+      return { ...f, presentes: [...(f.presentes || []), val] };
+    });
+    setFilhos(updated);
+    setNovoPresenteFilhos({ ...novoPresenteFilhos, [index]: '' });
+  };
+
+  const removerPresenteFilho = (index, presIndex) => {
+    const updated = filhos.map((f, i) => {
+      if (i !== index) return f;
+      if (typeof f === 'string') return f;
+      const newPres = (f.presentes || []).filter((_, pi) => pi !== presIndex);
+      return { ...f, presentes: newPres };
+    });
+    setFilhos(updated);
+  };
+
+  const removerPresente = (index) => {
+    setPresentes(presentes.filter((_, i) => i !== index));
   };
   
   const cadastrarParticipante = async () => {
@@ -67,14 +104,17 @@ export default function EventoParticipante({
     let eventoAtualizado;
     let codigoAcessoGerado;
     
-    if (participanteExistente) {
+      // normalize filhos to objects before saving
+      const filhosNormalizados = (filhos || []).map(f => typeof f === 'string' ? { nome: f, presentes: [] } : { nome: f.nome, presentes: f.presentes || [] });
+
+      if (participanteExistente) {
       // Atualiza participante existente
       codigoAcessoGerado = participanteExistente.codigoAcesso;
       eventoAtualizado = {
         ...eventoAtual,
         participantes: participantes.map(p => 
           p.id === participanteExistente.id 
-            ? { ...p, nome: nomeParticipante.trim(), celular: celular.trim(), filhos: [...filhos] }
+            ? { ...p, nome: nomeParticipante.trim(), celular: celular.trim(), filhos: [...filhosNormalizados], presentes: [...presentes] }
             : p
         )
       };
@@ -85,7 +125,8 @@ export default function EventoParticipante({
         id: gerarCodigo(),
         nome: nomeParticipante.trim(),
         celular: celular.trim(),
-        filhos: [...filhos],
+          filhos: [...filhosNormalizados],
+          presentes: [...presentes],
         codigoAcesso: codigoAcessoGerado
       };
       
@@ -112,6 +153,7 @@ export default function EventoParticipante({
       setNomeParticipante('');
       setCelular('');
       setFilhos([]);
+      setPresentes([]);
     } catch (error) {
       alert('Erro ao cadastrar. Tente novamente.', error);
     }
@@ -199,6 +241,44 @@ export default function EventoParticipante({
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
+
+                  <div className="mb-6 pb-6 border-b">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Minhas sugestões de presentes
+                    </label>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        placeholder="Ex: Livro, camiseta, caneca..."
+                        value={novoPresente}
+                        onChange={(e) => setNovoPresente(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && adicionarPresente()}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                      />
+                      <button
+                        onClick={adicionarPresente}
+                        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {presentes.length > 0 && (
+                      <div className="space-y-2">
+                        {presentes.map((pres, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                            <span className="text-sm">{pres}</span>
+                            <button
+                              onClick={() => removerPresente(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -223,17 +303,55 @@ export default function EventoParticipante({
                     
                     {filhos.length > 0 && (
                       <div className="space-y-2">
-                        {filhos.map((filho, index) => (
-                          <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
-                            <span>{filho}</span>
-                            <button
-                              onClick={() => removerFilho(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
+                        {filhos.map((filho, index) => {
+                          const nome = typeof filho === 'string' ? filho : filho.nome;
+                          const presentesFilho = typeof filho === 'string' ? [] : (filho.presentes || []);
+                          return (
+                            <div key={index} className="bg-gray-50 p-3 rounded">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{nome}</span>
+                                <button
+                                  onClick={() => removerFilho(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              <div className="mt-2">
+                                <div className="flex gap-2 mb-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Sugestão para este filho"
+                                    value={novoPresenteFilhos[index] || ''}
+                                    onChange={(e) => setNovoPresenteFilhos({ ...novoPresenteFilhos, [index]: e.target.value })}
+                                    onKeyPress={(e) => e.key === 'Enter' && adicionarPresenteFilho(index)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                  />
+                                  <button
+                                    onClick={() => adicionarPresenteFilho(index)}
+                                    className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+
+                                {presentesFilho.length > 0 && (
+                                  <div className="space-y-1">
+                                    {presentesFilho.map((pres, pi) => (
+                                      <div key={pi} className="flex items-center justify-between bg-white px-3 py-1 rounded">
+                                        <span className="text-sm text-gray-700">{pres}</span>
+                                        <button onClick={() => removerPresenteFilho(index, pi)} className="text-red-500 hover:text-red-700">
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -257,7 +375,22 @@ export default function EventoParticipante({
                         .sort((a, b) => a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' }))
                         .map(p => (
                           <div key={p.id} className="text-sm text-gray-700">
-                            {p.nome} {p.filhos && p.filhos.length > 0 && `(+ ${p.filhos.join(', ')})`}
+                              {p.nome} {p.filhos && p.filhos.length > 0 && `(+ ${p.filhos.map(f => typeof f === 'string' ? f : f.nome).join(', ')})`}
+                              {p.presentes && p.presentes.length > 0 && (
+                                <div className="text-xs text-gray-500 mt-1">Sugestões: {p.presentes.join(', ')}</div>
+                              )}
+                              {p.filhos && p.filhos.length > 0 && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {p.filhos.map((f, i) => {
+                                    const filhoObj = typeof f === 'string' ? null : f;
+                                    const nomeFilho = filhoObj ? filhoObj.nome : f;
+                                    const presentesFilho = filhoObj ? (filhoObj.presentes || []) : [];
+                                    return presentesFilho.length > 0 ? (
+                                      <div key={i}>Sugestões ({nomeFilho}): {presentesFilho.join(', ')}</div>
+                                    ) : null;
+                                  })}
+                                </div>
+                              )}
                           </div>
                         ))}
                     </div>

@@ -28,6 +28,13 @@ export default function AdminEvento({
   // Instead derive the effective page to render from state and bounds.
   const currentPage = Math.min(Math.max(1, page), totalPages);
 
+  const safeName = (val) => {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val.nome) return val.nome;
+    return String(val);
+  };
+
   const excluirParticipante = async (participanteId) => {
     if (!confirm('Tem certeza que deseja excluir este participante?')) {
       return;
@@ -161,8 +168,20 @@ export default function AdminEvento({
                           <p className="font-semibold text-gray-800">{p.nome}</p>
                           <p className="text-sm text-gray-600">{p.celular}</p>
                           {p.filhos && p.filhos.length > 0 && (
-                            <p className="text-sm text-gray-500">Filhos: {p.filhos.join(', ')}</p>
+                            <div>
+                              <p className="text-sm text-gray-500">Filhos: {p.filhos.map(f => typeof f === 'string' ? f : f.nome).join(', ')}</p>
+                              {p.filhos.map(f => {
+                                const filhoObj = typeof f === 'string' ? null : f;
+                                const nomes = filhoObj ? (filhoObj.presentes || []) : [];
+                                return filhoObj && nomes.length > 0 ? (
+                                  <p key={filhoObj.nome} className="text-sm text-gray-500">Sugestões ({filhoObj.nome}): {nomes.join(', ')}</p>
+                                ) : null;
+                              })}
+                            </div>
                           )}
+                            {p.presentes && p.presentes.length > 0 && (
+                              <p className="text-sm text-gray-500 mt-1">Sugestões: {p.presentes.join(', ')}</p>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded">
@@ -184,16 +203,19 @@ export default function AdminEvento({
                         <div className="space-y-1 pt-2 border-t">
                           <div className="flex justify-between items-center">
                             <p className="text-sm">
-                              <strong>{p.nome}</strong> tirou: {eventoAtual.sorteio[p.nome]}
+                              <strong>{p.nome}</strong> tirou: {safeName(eventoAtual.sorteio[p.nome])}
                             </p>
                           </div>
-                          {p.filhos && p.filhos.map(filho => (
-                            <div key={filho} className="flex justify-between items-center">
-                              <p className="text-sm">
-                                <strong>{filho}</strong> tirou: {eventoAtual.sorteio[filho]}
-                              </p>
-                            </div>
-                          ))}
+                          {p.filhos && p.filhos.map(filho => {
+                            const filhoNome = typeof filho === 'string' ? filho : (filho && filho.nome ? filho.nome : String(filho));
+                            return (
+                              <div key={filhoNome} className="flex justify-between items-center">
+                                  <p className="text-sm">
+                                  <strong>{filhoNome}</strong> tirou: {safeName(eventoAtual.sorteio[filhoNome])}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

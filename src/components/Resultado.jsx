@@ -9,6 +9,34 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
   const participante = eventoAtual.participanteAtual;
   const codigoCadastro = participante?.codigoAcesso || '';
   const successMessage = eventoAtual.successMessage || (participante ? 'Seu código de acesso' : null);
+  // Encontrar o participante correspondente ao amigo sorteado para exibir sugestões
+  const findPersonByName = (name) => {
+    const participantes = eventoAtual.participantes || [];
+    for (const p of participantes) {
+      if (p.nome === name) return p;
+      if (p.filhos) {
+        for (const f of p.filhos) {
+          if (typeof f === 'string') {
+            if (f === name) return { nome: f, presentes: [] };
+          } else {
+            if (f.nome === name) return f;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const safeName = (val) => {
+    if (val == null) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val.nome) return val.nome;
+    return String(val);
+  };
+
+  const amigoNome = participante ? safeName(eventoAtual.sorteio[participante.nome]) : null;
+  const amigoObj = amigoNome ? findPersonByName(amigoNome) : null;
+  const amigoPresentes = amigoObj?.presentes || [];
 
 /*   const enviarWhatsApp = (nome, amigo, celular) => {
     const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.nome, eventoAtual.valorSugerido);
@@ -41,29 +69,28 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
 
             <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-2">Seu amigo secreto é:</p>
-              <p className="text-3xl font-bold text-red-600">{eventoAtual.sorteio[participante.nome]}</p>
-              {/* <button
-                onClick={() => enviarWhatsApp(participante.nome, eventoAtual.sorteio[participante.nome], participante.celular)}
-                className="mt-4 bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition flex items-center gap-2 mx-auto"
-              >
-                <Send className="w-4 h-4" />
-                Enviar para WhatsApp
-              </button> */}
+              <p className="text-3xl font-bold text-red-600">{safeName(eventoAtual.sorteio[participante.nome])}</p>
+              {amigoPresentes.length > 0 && (
+                <div className="mt-3 text-left">
+                  <p className="text-sm text-gray-700 mb-1">Sugestões do seu amigo:</p>
+                  <ul className="list-disc list-inside text-sm text-gray-700">
+                    {amigoPresentes.map((pres, i) => <li key={i}>{pres}</li>)}
+                  </ul>
+                </div>
+              )}
+              {/* Optional: share to WhatsApp button can be re-enabled here */}
             </div>
 
-            {participante.filhos && participante.filhos.map(filho => (
-              <div key={filho} className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-2">Amigo secreto de <b>{filho}</b>:</p>
-                <p className="text-2xl font-bold text-blue-600">{eventoAtual.sorteio[filho]}</p>
-                {/* <button
-                  onClick={() => enviarWhatsApp(filho, eventoAtual.sorteio[filho], participante.celular)}
-                  className="mt-4 bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition flex items-center gap-2 mx-auto"
-                >
-                  <Send className="w-4 h-4" />
-                  Enviar para WhatsApp
-                </button> */}
-              </div>
-            ))}
+            {participante.filhos && participante.filhos.map(filho => {
+              const filhoNome = typeof filho === 'string' ? filho : (filho && filho.nome ? filho.nome : String(filho));
+              return (
+                <div key={filhoNome} className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-2">Amigo secreto de <b>{filhoNome}</b>:</p>
+                  <p className="text-2xl font-bold text-blue-600">{safeName(eventoAtual.sorteio[filhoNome])}</p>
+                </div>
+              );
+            })}
+
           </div>
 
           {codigoCadastro && (
