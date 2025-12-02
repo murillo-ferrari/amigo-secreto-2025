@@ -20,6 +20,7 @@ export default function AdminEvento({
   const pageSize = 5;
   const participantes = eventoAtual?.participantes || [];
   const totalParticipants = participantes.length;
+  const hasAnyFilhos = participantes.some(p => p.filhos && p.filhos.length > 0);
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const sorteado = !!eventoAtual?.sorteado;
 
@@ -110,7 +111,7 @@ export default function AdminEvento({
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-2xl mx-auto pt-12">
-      <Header />
+        <Header />
         <button
           onClick={() => setView('home')}
           className="mb-4 text-gray-600 hover:text-gray-800"
@@ -142,7 +143,7 @@ export default function AdminEvento({
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({contarTotalParticipantes(participantes)}, incluindo filhos)
+              Participantes ({contarTotalParticipantes(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''})
             </h3>
 
             {participantes.length === 0 ? (

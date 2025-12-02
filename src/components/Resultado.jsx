@@ -31,6 +31,11 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
         </button>
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">{eventoAtual.nome}</h2>
+          {eventoAtual.valorSugerido && (
+            <div className="mb-6 pb-6 border-b">
+              <p className="text-gray-600">Valor sugerido: <span className="font-bold">R$ {eventoAtual.valorSugerido}</span></p>
+            </div>
+          )}
 
           <div className="space-y-4">
 
@@ -48,7 +53,7 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
 
             {participante.filhos && participante.filhos.map(filho => (
               <div key={filho} className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-2">Amigo secreto de {filho}:</p>
+                <p className="text-sm text-gray-600 mb-2">Amigo secreto de <b>{filho}</b>:</p>
                 <p className="text-2xl font-bold text-blue-600">{eventoAtual.sorteio[filho]}</p>
                 {/* <button
                   onClick={() => enviarWhatsApp(filho, eventoAtual.sorteio[filho], participante.celular)}
@@ -71,12 +76,6 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
                   <CopyButton text={codigoCadastro} />
                 </div>
               </div>
-            </div>
-          )}
-
-          {eventoAtual.valorSugerido && (
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-gray-600">Valor sugerido: <span className="font-bold">R$ {eventoAtual.valorSugerido}</span></p>
             </div>
           )}
         </div>

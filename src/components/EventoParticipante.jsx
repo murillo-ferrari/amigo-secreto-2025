@@ -25,6 +25,8 @@ export default function EventoParticipante({
   const [codigoCadastro, setCodigoCadastro] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [codigoParticipante, setCodigoParticipante] = useState('');
+  const participantes = eventoAtual?.participantes || [];
+  const hasAnyFilhos = participantes.some(p => p.filhos && p.filhos.length > 0);
   
   const handleCelularChange = (e) => {
     const valorFormatado = formatarCelular(e.target.value);
@@ -142,9 +144,11 @@ export default function EventoParticipante({
         </button>
         
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">{eventoAtual.nome}</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">{eventoAtual.nome}</h2>
           {eventoAtual.valorSugerido && (
-            <p className="text-gray-600 mb-6">Valor sugerido: R$ {eventoAtual.valorSugerido}</p>
+            <div className="mb-6 pb-6 border-b">
+              <p className="text-gray-600">Valor sugerido: <span className="font-bold">R$ {eventoAtual.valorSugerido}</span></p>
+            </div>
           )}
 
           {/* show spinner if evento not ready */}
@@ -244,11 +248,11 @@ export default function EventoParticipante({
                   </button>
                   
                   <div className="pt-4 border-t">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Participantes cadastrados: {contarTotalParticipantes(eventoAtual.participantes || [])} no total
+                    <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
+                      Participantes: {contarTotalParticipantes(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''}
                     </p>
                     <div className="space-y-1">
-                      {(eventoAtual.participantes || [])
+                      {participantes
                         .slice()
                         .sort((a, b) => a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' }))
                         .map(p => (
