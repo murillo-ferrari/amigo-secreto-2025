@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { formatarCelular, validarCelular } from '../utils/helpers';
+import { formatMobileNumber, verifyMobileNumber } from '../../utils/helpers';
 
 export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
   const [showRecover, setShowRecover] = useState(false);
@@ -23,13 +23,13 @@ export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
             type="tel"
             placeholder="(11) 99999-9999"
             value={recoverCelular}
-            onChange={(e) => setRecoverCelular(formatarCelular(e.target.value))}
+            onChange={(e) => setRecoverCelular(formatMobileNumber(e.target.value))}
             className="w-full px-3 py-2 border border-gray-300 rounded mb-2"
           />
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const valid = validarCelular(recoverCelular);
+                const valid = verifyMobileNumber(recoverCelular);
                 if (!valid.valido) {
                   alert(valid.erro);
                   return;

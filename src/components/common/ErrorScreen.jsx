@@ -1,5 +1,5 @@
 import React from 'react';
-import CopyButton from './BotaoCopiar';
+import CopyButton from './CopyButton';
 
 export default function ErrorScreen({ error, onRetry }) {
   const message = (error && error.message) ? error.message : String(error);

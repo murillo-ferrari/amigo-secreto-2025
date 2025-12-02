@@ -1,8 +1,8 @@
 import { Gift, Send } from 'lucide-react';
 // import { gerarLinkWhatsApp } from '../utils/helpers';
-import Header from './Header';
-import Footer from './Footer';
-import CopyButton from './BotaoCopiar';
+import Header from '../layout/Header';
+import Footer from '../layout/Footer';
+import CopyButton from '../common/CopyButton';
 
 
 export default function Resultado({ eventoAtual, setView, setEventoAtual, setCodigoAcesso }) {
@@ -83,10 +83,22 @@ export default function Resultado({ eventoAtual, setView, setEventoAtual, setCod
 
             {participante.filhos && participante.filhos.map(filho => {
               const filhoNome = typeof filho === 'string' ? filho : (filho && filho.nome ? filho.nome : String(filho));
+              const amigoDoFilhoNome = safeName(eventoAtual.sorteio[filhoNome]);
+              const amigoDoFilhoObj = amigoDoFilhoNome ? findPersonByName(amigoDoFilhoNome) : null;
+              const amigoDoFilhoPresentes = amigoDoFilhoObj?.presentes || [];
+
               return (
                 <div key={filhoNome} className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-2">Amigo secreto de <b>{filhoNome}</b>:</p>
-                  <p className="text-2xl font-bold text-blue-600">{safeName(eventoAtual.sorteio[filhoNome])}</p>
+                  <p className="text-2xl font-bold text-blue-600">{amigoDoFilhoNome}</p>
+                  {amigoDoFilhoPresentes.length > 0 && (
+                    <div className="mt-3 text-left">
+                      <p className="text-sm text-gray-700 mb-1">Sugestões do amigo:</p>
+                      <ul className="list-disc list-inside text-sm text-gray-700">
+                        {amigoDoFilhoPresentes.map((pres, i) => <li key={i}>{pres}</li>)}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               );
             })}

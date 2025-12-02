@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import CopyButton from './BotaoCopiar';
+import CopyButton from '../common/CopyButton';
 
 export default function QRCodeCard({ url, label = 'Compartilhar evento', size = 300, eventName = '' }) {
   const [downloading, setDownloading] = useState(false);

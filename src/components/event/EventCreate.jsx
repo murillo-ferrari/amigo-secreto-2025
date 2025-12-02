@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { gerarCodigo, hashCode } from '../utils/helpers';
-import Header from './Header';
-import Footer from './Footer';
-import QRCodeCard from './QRCodeCard';
+import { createUniqueCode, hashCode } from '../../utils/helpers';
+import Header from '../layout/Header';
+import Footer from '../layout/Footer';
+import QRCodeCard from './QRCode';
 
 export default function CriarEvento({ setView, eventos, setEventos, setEventoAtual }) {
   const [nomeEvento, setNomeEvento] = useState('');
@@ -15,8 +15,8 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
       return;
     }
     
-    const codigo = gerarCodigo();
-    const codigoAdmin = gerarCodigo();
+    const codigo = createUniqueCode();
+    const codigoAdmin = createUniqueCode();
     
     // Hash do código admin para armazenamento seguro
     const codigoAdminHash = await hashCode(codigoAdmin);

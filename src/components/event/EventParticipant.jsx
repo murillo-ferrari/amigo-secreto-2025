@@ -1,12 +1,12 @@
 // src/components/EventoParticipante.jsx
 import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { gerarCodigo, formatarCelular, contarTotalParticipantes, validarCelular } from '../utils/helpers';
-import Header from './Header';
-import Footer from './Footer';
-import CopyButton from './BotaoCopiar';
-import Spinner from './Spinner';
-import QRCodeCard from './QRCodeCard';
+import { createUniqueCode, formatMobileNumber, calculateTotalParticipants, verifyMobileNumber } from '../../utils/helpers';
+import Header from '../layout/Header';
+import Footer from '../layout/Footer';
+import CopyButton from '../common/CopyButton';
+import Spinner from '../common/Spinner';
+import QRCodeCard from './QRCode';
 
 export default function EventoParticipante({
   eventoAtual,
@@ -34,7 +34,7 @@ export default function EventoParticipante({
   const hasAnyFilhos = participantes.some(p => p.filhos && p.filhos.length > 0);
 
   const handleCelularChange = (e) => {
-    const valorFormatado = formatarCelular(e.target.value);
+    const valorFormatado = formatMobileNumber(e.target.value);
     setCelular(valorFormatado);
   };
 
@@ -89,7 +89,7 @@ export default function EventoParticipante({
     }
 
     // Valida o número de celular
-    const validacao = validarCelular(celular);
+    const validacao = verifyMobileNumber(celular);
     if (!validacao.valido) {
       alert(validacao.erro);
       return;
@@ -121,9 +121,9 @@ export default function EventoParticipante({
       };
     } else {
       // Cria novo participante
-      codigoAcessoGerado = gerarCodigo();
+      codigoAcessoGerado = createUniqueCode();
       const novoParticipante = {
-        id: gerarCodigo(),
+        id: createUniqueCode(),
         nome: nomeParticipante.trim(),
         celular: celular.trim(),
         filhos: [...filhosNormalizados],
@@ -375,7 +375,7 @@ export default function EventoParticipante({
 
                   <div>
                     <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
-                      Participantes: {contarTotalParticipantes(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''}
+                      Participantes: {calculateTotalParticipants(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''}
                     </p>
                     <div className="space-y-1">
                       {participantes

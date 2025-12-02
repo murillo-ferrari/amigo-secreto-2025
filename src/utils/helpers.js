@@ -1,52 +1,52 @@
-// Gera código aleatório de 6 caracteres
-export const gerarCodigo = () => {
+// Generates a unique 6-character alphanumeric code
+export const createUniqueCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
-// Formata número de celular para (11) 99999-9999
-export const formatarCelular = (valor) => {
-  const numeros = valor.replace(/\D/g, '');
+// Formats a Brazilian mobile number as (XX) XXXXX-XXXX
+export const formatMobileNumber = (valor) => {
+  const cleanedValue = valor.replace(/\D/g, '');
   
-  if (numeros.length <= 2) {
-    return numeros;
-  } else if (numeros.length <= 7) {
-    return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
-  } else if (numeros.length <= 11) {
-    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+  if (cleanedValue.length <= 2) {
+    return cleanedValue;
+  } else if (cleanedValue.length <= 7) {
+    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2)}`;
+  } else if (cleanedValue.length <= 11) {
+    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2, 7)}-${cleanedValue.slice(7, 11)}`;
   } else {
-    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`;
+    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2, 7)}-${cleanedValue.slice(7, 11)}`;
   }
 };
 
-// Valida número de celular brasileiro (deve ter 10 ou 11 dígitos)
-export const validarCelular = (celular) => {
-  const numeros = celular.replace(/\D/g, '');
+// Validates Brazilian mobile number (must have 10 or 11 digits)
+export const verifyMobileNumber = (celular) => {
+  const formattedNumbers = celular.replace(/\D/g, '');
   
-  // Deve ter 10 ou 11 dígitos (com ou sem 9 inicial)
-  if (numeros.length < 10 || numeros.length > 11) {
+  // Must be 10 or 11 digits long.
+  if (formattedNumbers.length < 10 || formattedNumbers.length > 11) {
     return { valido: false, erro: 'Celular deve ter 10 ou 11 dígitos' };
   }
   
-  // DDD deve ser válido (11-99)
-  const ddd = parseInt(numeros.slice(0, 2));
+  // DDD must be valid (11-99)
+  const ddd = parseInt(formattedNumbers.slice(0, 2));
   if (ddd < 11 || ddd > 99) {
     return { valido: false, erro: 'DDD inválido' };
   }
   
-  // Se tem 11 dígitos, o terceiro deve ser 9 (celular)
-  if (numeros.length === 11 && numeros[2] !== '9') {
+  // If 11 digits, the third digit must be 9
+  if (formattedNumbers.length === 11 && formattedNumbers[2] !== '9') {
     return { valido: false, erro: 'Número de celular inválido' };
   }
   
   return { valido: true, erro: null };
 };
 
-// Conta total de participantes incluindo filhos
-export const contarTotalParticipantes = (participantes) => {
-  if (!participantes || !Array.isArray(participantes)) {
+// Counts total participants including children
+export const calculateTotalParticipants = (participants) => {
+  if (!participants || !Array.isArray(participants)) {
     return 0;
   }
-  return participantes.reduce((total, p) => {
+  return participants.reduce((total, p) => {
     return total + 1 + (p.filhos && p.filhos.length ? p.filhos.length : 0);
   }, 0);
 };
@@ -62,7 +62,7 @@ export const contarTotalParticipantes = (participantes) => {
   return `https://wa.me/${celular.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
 }; */
 
-// Hash simples para códigos (SHA-256)
+// Simple hash for codes (SHA-256)
 export const hashCode = async (code) => {
   const encoder = new TextEncoder();
   const data = encoder.encode(code.toUpperCase());
@@ -72,8 +72,8 @@ export const hashCode = async (code) => {
   return hashHex;
 };
 
-// Verifica se um código corresponde a um hash
-export const verificarHash = async (code, hash) => {
+// Verifies if a code matches a hash
+export const validateHash = async (code, hash) => {
   const codeHash = await hashCode(code);
   return codeHash === hash;
 };

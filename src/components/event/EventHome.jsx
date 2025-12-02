@@ -1,6 +1,6 @@
-import Header from './Header';
-import Footer from './Footer';
-import RecuperarCodigo from './RecuperarCodigo';
+import Header from '../layout/Header';
+import Footer from '../layout/Footer';
+import RecuperarCodigo from './EventRecoverCode';
 
 export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEvento, recuperarPorCelular, loading }) {
   return (

@@ -1,12 +1,12 @@
 // src/components/AdminEvento.jsx
-import React, { useState } from 'react';
-import { Users, Shuffle, Trash, Trash2, Send } from 'lucide-react';
-import { contarTotalParticipantes } from '../utils/helpers';
-import { realizarSorteio } from '../utils/sorteio';
-import Header from './Header';
-import Footer from './Footer';
-import CopyButton from './BotaoCopiar';
-import Spinner from './Spinner';
+import { Shuffle, Trash, Trash2, Users } from 'lucide-react';
+import { useState } from 'react';
+import { performSecretSantaDraw } from '../../utils/drawEvent';
+import { calculateTotalParticipants } from '../../utils/helpers';
+import CopyButton from '../common/CopyButton';
+import Spinner from '../common/Spinner';
+import Footer from '../layout/Footer';
+import Header from '../layout/Header';
 
 export default function AdminEvento({
   eventoAtual,
@@ -83,7 +83,7 @@ export default function AdminEvento({
       return;
     }
 
-    await realizarSorteio(eventoAtual, setEventoAtual, eventos, setEventos);
+    await performSecretSantaDraw(eventoAtual, setEventoAtual, eventos, setEventos);
   };
 
   const excluirEvento = async (eventoCodigo) => {
@@ -150,7 +150,7 @@ export default function AdminEvento({
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({contarTotalParticipantes(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''})
+              Participantes ({calculateTotalParticipants(participantes)}{hasAnyFilhos ? ', incluindo filhos' : ''})
             </h3>
 
             {participantes.length === 0 ? (
@@ -252,9 +252,9 @@ export default function AdminEvento({
 
           {!sorteado && participantes.length >= 2 && (
             <button
-              onClick={() => realizarSorteio(eventoAtual, setEventoAtual, eventos, setEventos)}
+              onClick={() => performSecretSantaDraw(eventoAtual, setEventoAtual, eventos, setEventos)}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
-              disabled={contarTotalParticipantes(participantes) < 2}
+              disabled={calculateTotalParticipants(participantes) < 2}
             >
               <Shuffle className="w-5 h-5" />
               Realizar Sorteio

@@ -1,12 +1,12 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
-import Home from './components/Home';
-import CriarEvento from './components/CriarEvento';
-import EventoParticipante from './components/EventoParticipante';
-import AdminEvento from './components/AdminEvento';
-import Resultado from './components/Resultado';
-import { verificarHash } from './utils/helpers';
-import ErrorScreen from './components/ErrorScreen';
+import Home from './components/event/EventHome';
+import CriarEvento from './components/event/EventCreate';
+import EventoParticipante from './components/event/EventParticipant';
+import AdminEvento from './components/event/EventAdmin';
+import Resultado from './components/event/Results';
+import { validateHash } from './utils/helpers';
+import ErrorScreen from './components/common/ErrorScreen';
 
 export default function AmigoSecreto() {
   const [view, setView] = useState('home');
@@ -96,7 +96,7 @@ export default function AmigoSecreto() {
             
             // Verifica se é código admin (usando hash)
             if (evento.codigoAdminHash) {
-              const isAdminCode = await verificarHash(codigo, evento.codigoAdminHash);
+              const isAdminCode = await validateHash(codigo, evento.codigoAdminHash);
               if (isAdminCode) {
                 eventoEncontrado = evento;
                 isAdmin = true;
