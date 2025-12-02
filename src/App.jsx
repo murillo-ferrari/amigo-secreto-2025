@@ -6,12 +6,14 @@ import EventoParticipante from './components/EventoParticipante';
 import AdminEvento from './components/AdminEvento';
 import Resultado from './components/Resultado';
 import { verificarHash } from './utils/helpers';
+import ErrorScreen from './components/ErrorScreen';
 
 export default function AmigoSecreto() {
   const [view, setView] = useState('home');
   const [eventos, setEventos] = useState({});
   const [eventoAtual, setEventoAtual] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [storageError, setStorageError] = useState(null);
   const [codigoAcesso, setCodigoAcesso] = useState('');
   
   // Estados para participante
@@ -24,6 +26,16 @@ export default function AmigoSecreto() {
     // On mount, load events and, if a ?code=... query param is present,
     // try to open that event automatically (useful for QR links).
     const init = async () => {
+      // If storage initialization failed, show the error screen
+      try {
+        if (window.storage && window.storage.initError) {
+          setStorageError(window.storage.initError);
+          return;
+        }
+      } catch (err) {
+        console.error('Erro ao verificar storage/init:', err);
+      }
+
       await carregarEventos();
       try {
         const params = new URLSearchParams(window.location.search);
@@ -56,6 +68,7 @@ export default function AmigoSecreto() {
       setEventos(eventosCarregados);
     } catch (error) {
       console.log('Nenhum evento encontrado ainda', error);
+      setStorageError(error);
     } finally {
       setLoading(false);
     }
@@ -147,7 +160,7 @@ export default function AmigoSecreto() {
       }
     } catch (error) {
       console.error('Erro ao acessar evento:', error);
-      alert('Código não encontrado!');
+      setStorageError(error);
     } finally {
       setLoading(false);
     }
@@ -196,13 +209,16 @@ export default function AmigoSecreto() {
       alert('Celular não encontrado. Verifique o número e tente novamente.');
     } catch (error) {
       console.error('Erro ao recuperar por celular:', error);
-      alert('Erro ao procurar celular. Tente novamente.');
+      setStorageError(error);
     } finally {
       setLoading(false);
     }
   };
   
   // Renderiza componente baseado na view
+  if (storageError) {
+    return <ErrorScreen error={storageError} onRetry={() => { setStorageError(null); window.location.reload(); }} />;
+  }
   if (view === 'home') {
     return (
       <Home 
