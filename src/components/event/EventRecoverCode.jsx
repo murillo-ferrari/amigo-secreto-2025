@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
 
-export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
+export default function RecoverCode({ recuperarPorCelular: recoverCodeByPhone, loading }) {
   const [showRecover, setShowRecover] = useState(false);
-  const [recoverCelular, setRecoverCelular] = useState("");
+  const [recoveryPhoneNumber, setRecoverCelular] = useState("");
 
   return (
     <div>
@@ -24,7 +24,7 @@ export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
           <input
             type="tel"
             placeholder="(11) 99999-9999"
-            value={recoverCelular}
+            value={recoveryPhoneNumber}
             onChange={(e) =>
               setRecoverCelular(formatMobileNumber(e.target.value))
             }
@@ -33,12 +33,12 @@ export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const valid = verifyMobileNumber(recoverCelular);
-                if (!valid.valido) {
-                  alert(valid.erro);
+                const valid = verifyMobileNumber(recoveryPhoneNumber);
+                if (!valid.isValid) {
+                  alert(valid.errorMessage);
                   return;
                 }
-                recuperarPorCelular(recoverCelular);
+                recoverCodeByPhone(recoveryPhoneNumber);
               }}
               className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
               disabled={loading}

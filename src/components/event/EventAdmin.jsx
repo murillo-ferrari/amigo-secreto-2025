@@ -8,22 +8,22 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 
 export default function AdminEvento({
-  eventoAtual,
-  setEventoAtual,
-  eventos,
-  setEventos,
+  eventoAtual: currentEvent,
+  setEventoAtual: updateCurrentEvent,
+  eventos: eventList,
+  setEventos: updateEventList,
   setView,
   loading,
 }) {
   const [page, setPage] = useState(1);
   const pageSize = 5;
-  const participantes = eventoAtual?.participantes || [];
-  const totalParticipants = participantes.length;
-  const hasAnyFilhos = participantes.some(
+  const participants = currentEvent?.participantes || [];
+  const totalParticipants = participants.length;
+  const hasAnyFilhos = participants.some(
     (p) => p.filhos && p.filhos.length > 0
   );
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
-  const sorteado = !!eventoAtual?.sorteado;
+  const isDrawn = !!currentEvent?.sorteado;
 
   // Avoid calling setState synchronously in an effect (can trigger cascading renders).
   const currentPage = Math.min(Math.max(1, page), totalPages);
@@ -35,15 +35,15 @@ export default function AdminEvento({
     return String(val);
   };
 
-  const excluirParticipante = async (participanteId) => {
+  const removeParticipant = async (participantId) => {
     if (!confirm("Tem certeza que deseja excluir este participante?")) {
       return;
     }
 
-    const eventoAtualizado = {
-      ...eventoAtual,
-      participantes: (eventoAtual.participantes || []).filter(
-        (p) => p.id !== participanteId
+    const updatedEvent = {
+      ...currentEvent,
+      participants: (currentEvent.participantes || []).filter(
+        (p) => p.id !== participantId
       ),
       sorteado: false,
       sorteio: {},
@@ -51,17 +51,17 @@ export default function AdminEvento({
 
     try {
       await window.storage.set(
-        `evento:${eventoAtual.codigo}`,
-        JSON.stringify(eventoAtualizado)
+        `evento:${currentEvent.codigo}`,
+        JSON.stringify(updatedEvent)
       );
-      setEventoAtual(eventoAtualizado);
-      setEventos({ ...eventos, [eventoAtual.codigo]: eventoAtualizado });
+      updateCurrentEvent(updatedEvent);
+      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
     } catch (error) {
       alert("Erro ao excluir participante. Tente novamente.", error);
     }
   };
 
-  const excluirSorteio = async () => {
+  const deleteCurrentDraw = async () => {
     if (
       !confirm(
         "Tem certeza que deseja excluir o sorteio atual? Isso permitirá realizar um novo sorteio."
@@ -70,8 +70,8 @@ export default function AdminEvento({
       return;
     }
 
-    const eventoAtualizado = {
-      ...eventoAtual,
+    const refreshedEvent = {
+      ...currentEvent,
       sorteado: false,
       sorteio: {},
       dataSorteio: null,
@@ -79,18 +79,18 @@ export default function AdminEvento({
 
     try {
       await window.storage.set(
-        `evento:${eventoAtual.codigo}`,
-        JSON.stringify(eventoAtualizado)
+        `evento:${currentEvent.codigo}`,
+        JSON.stringify(refreshedEvent)
       );
-      setEventoAtual(eventoAtualizado);
-      setEventos({ ...eventos, [eventoAtual.codigo]: eventoAtualizado });
+      updateCurrentEvent(refreshedEvent);
+      updateEventList({ ...eventList, [currentEvent.codigo]: refreshedEvent });
       alert("Sorteio excluído com sucesso!");
     } catch (error) {
       alert("Erro ao excluir sorteio. Tente novamente.", error);
     }
   };
 
-  const refazerSorteio = async () => {
+  const redoSecretDraw = async () => {
     if (
       !confirm(
         "Tem certeza que deseja refazer o sorteio? O sorteio anterior será descartado."
@@ -100,14 +100,14 @@ export default function AdminEvento({
     }
 
     await performSecretSantaDraw(
-      eventoAtual,
-      setEventoAtual,
-      eventos,
-      setEventos
+      currentEvent,
+      updateCurrentEvent,
+      eventList,
+      updateEventList
     );
   };
 
-  const excluirEvento = async (eventoCodigo) => {
+  const removeEvent = async (eventId) => {
     if (
       !confirm(
         "Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita."
@@ -117,10 +117,10 @@ export default function AdminEvento({
     }
 
     try {
-      await window.storage.delete(`evento:${eventoCodigo}`);
-      const eventosAtualizados = { ...eventos };
-      delete eventosAtualizados[eventoCodigo];
-      setEventos(eventosAtualizados);
+      await window.storage.delete(`evento:${eventId}`);
+      const updatedEvents = { ...eventList };
+      delete updatedEvents[eventId];
+      updateEventList(updatedEvents);
       alert("Evento excluído com sucesso!");
     } catch (error) {
       alert("Erro ao excluir evento. Tente novamente", error);
@@ -132,7 +132,7 @@ export default function AdminEvento({
      window.open(url, '_blank');
    }; */
 
-  if (loading || !eventoAtual) {
+  if (loading || !currentEvent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner size={48} />
@@ -153,28 +153,28 @@ export default function AdminEvento({
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            {eventoAtual.nome}
+            {currentEvent.nome}
           </h2>
           <p className="text-gray-600 mb-6">Painel de Administração</p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
               <p className="text-sm text-gray-600">Código Participantes</p>
               <div className="flex items-center">
                 <p className="text-2xl font-bold text-blue-600">
-                  {eventoAtual.codigo}
+                  {currentEvent.codigo}
                 </p>
-                <CopyButton text={eventoAtual.codigo} className="ml-2" />
+                <CopyButton text={currentEvent.codigo} className="ml-2" />
               </div>
             </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
+            <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-lg">
               <p className="text-sm text-gray-600">Código Admin</p>
               <div className="flex items-center">
                 <p className="text-2xl font-bold text-purple-600">
-                  {eventoAtual.codigoAdmin}
+                  {currentEvent.codigoAdmin}
                 </p>
                 <CopyButton
-                  text={eventoAtual.codigoAdmin || ""}
+                  text={currentEvent.codigoAdmin || ""}
                   className="ml-2"
                 />
               </div>
@@ -184,21 +184,21 @@ export default function AdminEvento({
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({calculateTotalParticipants(participantes)}
+              Participantes ({calculateTotalParticipants(participants)}
               {hasAnyFilhos ? ", incluindo filhos" : ""})
             </h3>
 
-            {participantes.length === 0 ? (
+            {participants.length === 0 ? (
               <p className="text-gray-500 text-sm">
                 Nenhum participante ainda. Compartilhe o código{" "}
-                {eventoAtual.codigo}
+                {currentEvent.codigo}
               </p>
             ) : (
               <div className="space-y-3">
                 {(() => {
                   const start = (currentPage - 1) * pageSize;
                   const end = Math.min(start + pageSize, totalParticipants);
-                  const pageItems = participantes.slice(start, end);
+                  const pageItems = participants.slice(start, end);
                   return pageItems.map((p) => (
                     <div
                       key={p.id}
@@ -221,18 +221,18 @@ export default function AdminEvento({
                                   .join(", ")}
                               </p>
                               {p.filhos.map((f) => {
-                                const filhoObj =
+                                const childObject =
                                   typeof f === "string" ? null : f;
-                                const nomes = filhoObj
-                                  ? filhoObj.presentes || []
+                                const giftsArray = childObject
+                                  ? childObject.presentes || []
                                   : [];
-                                return filhoObj && nomes.length > 0 ? (
+                                return childObject && giftsArray.length > 0 ? (
                                   <p
-                                    key={filhoObj.nome}
+                                    key={childObject.nome}
                                     className="text-sm text-gray-500"
                                   >
-                                    Sugestões ({filhoObj.nome}):{" "}
-                                    {nomes.join(", ")}
+                                    Sugestões ({childObject.nome}):{" "}
+                                    {giftsArray.join(", ")}
                                   </p>
                                 ) : null;
                               })}
@@ -248,9 +248,9 @@ export default function AdminEvento({
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                             {p.codigoAcesso}
                           </span>
-                          {!eventoAtual.sorteado && (
+                          {!currentEvent.sorteado && (
                             <button
-                              onClick={() => excluirParticipante(p.id)}
+                              onClick={() => removeParticipant(p.id)}
                               className="text-red-500 hover:text-red-700"
                               title="Excluir participante"
                             >
@@ -260,17 +260,17 @@ export default function AdminEvento({
                         </div>
                       </div>
 
-                      {sorteado && (
+                      {isDrawn && (
                         <div className="space-y-1 pt-2 border-t">
                           <div className="flex justify-between items-center">
                             <p className="text-sm">
                               <strong>{p.nome}</strong> tirou:{" "}
-                              {safeName(eventoAtual.sorteio[p.nome])}
+                              {safeName(currentEvent.sorteio[p.nome])}
                             </p>
                           </div>
                           {p.filhos &&
                             p.filhos.map((filho) => {
-                              const filhoNome =
+                              const childName =
                                 typeof filho === "string"
                                   ? filho
                                   : filho && filho.nome
@@ -278,12 +278,12 @@ export default function AdminEvento({
                                   : String(filho);
                               return (
                                 <div
-                                  key={filhoNome}
+                                  key={childName}
                                   className="flex justify-between items-center"
                                 >
                                   <p className="text-sm">
-                                    <strong>{filhoNome}</strong> tirou:{" "}
-                                    {safeName(eventoAtual.sorteio[filhoNome])}
+                                    <strong>{childName}</strong> tirou:{" "}
+                                    {safeName(currentEvent.sorteio[childName])}
                                   </p>
                                 </div>
                               );
@@ -340,25 +340,25 @@ export default function AdminEvento({
             )}
           </div>
 
-          {!sorteado && participantes.length >= 2 && (
+          {!isDrawn && participants.length >= 2 && (
             <button
               onClick={() =>
                 performSecretSantaDraw(
-                  eventoAtual,
-                  setEventoAtual,
-                  eventos,
-                  setEventos
+                  currentEvent,
+                  updateCurrentEvent,
+                  eventList,
+                  updateEventList
                 )
               }
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
-              disabled={calculateTotalParticipants(participantes) < 2}
+              disabled={calculateTotalParticipants(participants) < 2}
             >
               <Shuffle className="w-5 h-5" />
               Realizar Sorteio
             </button>
           )}
 
-          {eventoAtual.sorteado && (
+          {currentEvent.sorteado && (
             <div className="space-y-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                 <p className="text-green-800 font-semibold">
@@ -369,7 +369,7 @@ export default function AdminEvento({
 
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={refazerSorteio}
+                  onClick={redoSecretDraw}
                   className="bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
                 >
                   <Shuffle className="w-5 h-5" />
@@ -377,7 +377,7 @@ export default function AdminEvento({
                 </button>
 
                 <button
-                  onClick={excluirSorteio}
+                  onClick={deleteCurrentDraw}
                   className="bg-orange-600 text-white py-3 rounded-lg font-semibold hover:bg-orange-700 transition flex items-center justify-center gap-2"
                 >
                   <Trash className="w-5 h-5" />
@@ -390,7 +390,7 @@ export default function AdminEvento({
           <div className="mt-4">
             <button
               onClick={async () => {
-                await excluirEvento(eventoAtual.codigo);
+                await removeEvent(currentEvent.codigo);
                 setView("home");
               }}
               className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"

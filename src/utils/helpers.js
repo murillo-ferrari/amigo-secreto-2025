@@ -30,21 +30,21 @@ export const verifyMobileNumber = (celular) => {
 
   // Must be 10 or 11 digits long.
   if (formattedNumbers.length < 10 || formattedNumbers.length > 11) {
-    return { valido: false, erro: "Celular deve ter 10 ou 11 dígitos" };
+    return { isValid: false, errorMessage: "Celular deve ter 10 ou 11 dígitos" };
   }
 
   // DDD must be valid (11-99)
   const ddd = parseInt(formattedNumbers.slice(0, 2));
   if (ddd < 11 || ddd > 99) {
-    return { valido: false, erro: "DDD inválido" };
+    return { isValid: false, errorMessage: "DDD inválido" };
   }
 
   // If 11 digits, the third digit must be 9
   if (formattedNumbers.length === 11 && formattedNumbers[2] !== "9") {
-    return { valido: false, erro: "Número de celular inválido" };
+    return { isValid: false, errorMessage: "Número de celular inválido" };
   }
 
-  return { valido: true, erro: null };
+  return { isValid: true, errorMessage: null };
 };
 
 // Counts total participants including children

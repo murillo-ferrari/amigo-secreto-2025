@@ -1,13 +1,13 @@
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
-import RecuperarCodigo from "./EventRecoverCode";
+import RecoverCode from "./EventRecoverCode";
 
 export default function Home({
   setView,
-  codigoAcesso,
-  setCodigoAcesso,
-  acessarEvento,
-  recuperarPorCelular,
+  codigoAcesso: eventAccessCode,
+  setCodigoAcesso: updateEventAccessCode,
+  acessarEvento: accessEvent,
+  recuperarPorCelular: retrieveCodeByPhone,
   loading,
 }) {
   return (
@@ -36,19 +36,19 @@ export default function Home({
             <input
               type="text"
               placeholder="Digite o código do evento"
-              value={codigoAcesso}
-              onChange={(e) => setCodigoAcesso(e.target.value.toUpperCase())}
+              value={eventAccessCode}
+              onChange={(e) => updateEventAccessCode(e.target.value.toUpperCase())}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
             />
             <button
-              onClick={() => acessarEvento()}
+              onClick={() => accessEvent()}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
             >
               {loading ? "Carregando..." : "Acessar Evento"}
             </button>
 
-            <RecuperarCodigo
-              recuperarPorCelular={recuperarPorCelular}
+            <RecoverCode
+              recuperarPorCelular={retrieveCodeByPhone}
               loading={loading}
             />
           </div>

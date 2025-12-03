@@ -18,15 +18,15 @@ export default function QRCodeCard({
   const downloadQR = async () => {
     try {
       setDownloading(true);
-      const res = await fetch(qrSrc);
-      const blob = await res.blob();
+      const qrCodeResponse = await fetch(qrSrc);
+      const blob = await qrCodeResponse.blob();
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
       // Create a sanitized file name using the event name when available
       const baseName = eventName || "evento";
-      const sanitize = (s) =>
-        s
+      const sanitize = (inputString) =>
+        inputString
           .toString()
           .toLowerCase()
           .normalize("NFD")
@@ -40,8 +40,8 @@ export default function QRCodeCard({
       a.click();
       a.remove();
       URL.revokeObjectURL(href);
-    } catch (err) {
-      console.error("Erro ao baixar QR:", err);
+    } catch (error) {
+      console.error("Erro ao baixar QR:", error);
       alert("Erro ao baixar QR. Tente novamente.");
     } finally {
       setDownloading(false);

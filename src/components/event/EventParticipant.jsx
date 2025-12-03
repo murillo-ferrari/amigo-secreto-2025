@@ -12,186 +12,520 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import QRCodeCard from "./QRCode";
 
-export default function EventoParticipante({
-  eventoAtual,
-  setEventoAtual,
-  eventos,
-  setEventos,
-  setView,
-  nomeParticipante,
-  setNomeParticipante,
-  celular,
-  setCelular,
-  filhos,
-  setFilhos,
-  presentes,
-  setPresentes,
+export default function EventParticipant({
+  eventoAtual: currentEvent,
+  setEventoAtual: updateCurrentEvent,
+  eventos: eventList,
+  setEventos: updateEventList,
+  setView: updateView,
+  nomeParticipante: participantName,
+  setNomeParticipante: updateParticipantName,
+  celular: participantPhone,
+  setCelular: updateParticipantPhone,
+  filhos: participantsChildren,
+  setFilhos: updateParticipantsChildren,
+  presentes: gifts,
+  setPresentes: updateGifts,
 }) {
-  const [novoPresente, setNovoPresente] = useState("");
-  const [novoPresenteFilhos, setNovoPresenteFilhos] = useState({});
-  // support loading prop if passed
-  const [nomeFilho, setNomeFilho] = useState("");
-  const [codigoCadastro, setCodigoCadastro] = useState(null);
+  const [newGift, updateNewGift] = useState("");
+  const [childrenNewGift, updateChildrenGift] = useState({});
+  const [childName, updateChildName] = useState("");
+  const [participantCode, updateParticipantCode] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
-  const [codigoParticipante, setCodigoParticipante] = useState("");
-  const participantes = eventoAtual?.participantes || [];
-  const hasAnyFilhos = participantes.some(
-    (p) => p.filhos && p.filhos.length > 0
-  );
+  const [eventParticipantId, updateEventParticipantId] = useState("");
 
+  const eventParticipants = currentEvent?.participantes || [];
+  const hasChildren = eventParticipants.some((p) => p.filhos?.length > 0);
+  const isDrawComplete = currentEvent?.sorteado;
+
+  // ===== Phone Number Handling =====
   const handleCelularChange = (e) => {
     const valorFormatado = formatMobileNumber(e.target.value);
-    setCelular(valorFormatado);
+    updateParticipantPhone(valorFormatado);
   };
 
-  const adicionarFilho = () => {
-    if (nomeFilho.trim()) {
-      setFilhos([...filhos, { nome: nomeFilho.trim(), presentes: [] }]);
-      setNomeFilho("");
+  // ===== Children Management =====
+  const normalizeChild = (child) => {
+    if (typeof child === "string") {
+      return { nome: child, presentes: [] };
     }
+    return { nome: child.nome, presentes: child.presentes || [] };
   };
 
-  const removerFilho = (index) => {
-    setFilhos(filhos.filter((_, i) => i !== index));
+  const addParticipantChild = () => {
+    if (!childName.trim()) return;
+    
+    updateParticipantsChildren([
+      ...participantsChildren,
+      { nome: childName.trim(), presentes: [] },
+    ]);
+    updateChildName("");
   };
 
-  const adicionarPresente = () => {
-    if (novoPresente.trim()) {
-      setPresentes([...presentes, novoPresente.trim()]);
-      setNovoPresente("");
-    }
+  const removeParticipantChild = (index) => {
+    updateParticipantsChildren(participantsChildren.filter((_, i) => i !== index));
   };
 
-  const adicionarPresenteFilho = (index) => {
-    const val = (novoPresenteFilhos[index] || "").trim();
-    if (!val) return;
-    const updated = filhos.map((f, i) => {
-      if (i !== index) return f;
-      if (typeof f === "string") return { nome: f, presentes: [val] };
-      return { ...f, presentes: [...(f.presentes || []), val] };
+  const addChildGift = (childIndex) => {
+    const giftValue = (childrenNewGift[childIndex] || "").trim();
+    if (!giftValue) return;
+
+    const updatedChildren = participantsChildren.map((child, i) => {
+      if (i !== childIndex) return child;
+      
+      const normalized = normalizeChild(child);
+      return {
+        ...normalized,
+        presentes: [...normalized.presentes, giftValue],
+      };
     });
-    setFilhos(updated);
-    setNovoPresenteFilhos({ ...novoPresenteFilhos, [index]: "" });
+
+    updateParticipantsChildren(updatedChildren);
+    updateChildrenGift({ ...childrenNewGift, [childIndex]: "" });
   };
 
-  const removerPresenteFilho = (index, presIndex) => {
-    const updated = filhos.map((f, i) => {
-      if (i !== index) return f;
-      if (typeof f === "string") return f;
-      const newPres = (f.presentes || []).filter((_, pi) => pi !== presIndex);
-      return { ...f, presentes: newPres };
+  const removeChildGift = (childIndex, giftIndex) => {
+    const updatedChildren = participantsChildren.map((child, i) => {
+      if (i !== childIndex) return child;
+      if (typeof child === "string") return child;
+
+      return {
+        ...child,
+        presentes: (child.presentes || []).filter((_, pi) => pi !== giftIndex),
+      };
     });
-    setFilhos(updated);
+
+    updateParticipantsChildren(updatedChildren);
   };
 
-  const removerPresente = (index) => {
-    setPresentes(presentes.filter((_, i) => i !== index));
+  // ===== Gift Management =====
+  const addGift = () => {
+    if (!newGift.trim()) return;
+    
+    updateGifts([...gifts, newGift.trim()]);
+    updateNewGift("");
   };
 
-  const cadastrarParticipante = async () => {
-    if (!nomeParticipante.trim() || !celular.trim()) {
+  const removeGift = (index) => {
+    updateGifts(gifts.filter((_, i) => i !== index));
+  };
+
+  // ===== Participant Registration =====
+  const validateParticipantData = () => {
+    if (!participantName.trim() || !participantPhone.trim()) {
       alert("Preencha nome e celular!");
-      return;
+      return false;
     }
 
-    // Valida o número de celular
-    const validacao = verifyMobileNumber(celular);
-    if (!validacao.valido) {
-      alert(validacao.erro);
-      return;
+    const validation = verifyMobileNumber(participantPhone);
+    if (!validation.isValid) {
+      alert(validation.errorMessage);
+      return false;
     }
 
-    const participantes = eventoAtual.participantes || [];
+    return true;
+  };
 
-    // Verifica se é edição de participante existente
-    const participanteExistente = participantes.find(
-      (p) => p.nome === nomeParticipante.trim() || p.celular === celular.trim()
+  const findExistingParticipant = () => {
+    return eventParticipants.find(
+      (p) =>
+        p.nome === participantName.trim() ||
+        p.celular === participantPhone.trim()
     );
+  };
 
-    let eventoAtualizado;
-    let codigoAcessoGerado;
+  const normalizeChildren = () => {
+    return (participantsChildren || []).map(normalizeChild);
+  };
 
-    // normalize filhos to objects before saving
-    const filhosNormalizados = (filhos || []).map((f) =>
-      typeof f === "string"
-        ? { nome: f, presentes: [] }
-        : { nome: f.nome, presentes: f.presentes || [] }
+  const createNewParticipant = (accessCode) => {
+    return {
+      id: createUniqueCode(),
+      nome: participantName.trim(),
+      celular: participantPhone.trim(),
+      filhos: normalizeChildren(),
+      presentes: [...gifts],
+      codigoAcesso: accessCode,
+    };
+  };
+
+  const updateExistingParticipant = (existingParticipant) => {
+    return eventParticipants.map((p) =>
+      p.id === existingParticipant.id
+        ? {
+            ...p,
+            nome: participantName.trim(),
+            celular: participantPhone.trim(),
+            filhos: normalizeChildren(),
+            presentes: [...gifts],
+          }
+        : p
     );
+  };
 
-    if (participanteExistente) {
-      // Atualiza participante existente
-      codigoAcessoGerado = participanteExistente.codigoAcesso;
-      eventoAtualizado = {
-        ...eventoAtual,
-        participantes: participantes.map((p) =>
-          p.id === participanteExistente.id
-            ? {
-                ...p,
-                nome: nomeParticipante.trim(),
-                celular: celular.trim(),
-                filhos: [...filhosNormalizados],
-                presentes: [...presentes],
-              }
-            : p
-        ),
+  const saveEventToStorage = async (updatedEvent) => {
+    await window.storage.set(
+      `evento:${currentEvent.codigo}`,
+      JSON.stringify(updatedEvent)
+    );
+    updateCurrentEvent(updatedEvent);
+    updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+  };
+
+  const clearParticipantForm = () => {
+    updateParticipantName("");
+    updateParticipantPhone("");
+    updateParticipantsChildren([]);
+    updateGifts([]);
+  };
+
+  const showSuccessMessage = (isUpdate, accessCode) => {
+    updateParticipantCode(accessCode);
+    setSuccessMessage(
+      isUpdate ? "Cadastro atualizado com sucesso!" : "✓ Cadastrado com sucesso!"
+    );
+    clearParticipantForm();
+  };
+
+  const registerParticipant = async () => {
+    if (!validateParticipantData()) return;
+
+    const existingParticipant = findExistingParticipant();
+    let updatedEvent;
+    let accessCode;
+
+    if (existingParticipant) {
+      accessCode = existingParticipant.codigoAcesso;
+      updatedEvent = {
+        ...currentEvent,
+        participantes: updateExistingParticipant(existingParticipant),
       };
     } else {
-      // Cria novo participante
-      codigoAcessoGerado = createUniqueCode();
-      const novoParticipante = {
-        id: createUniqueCode(),
-        nome: nomeParticipante.trim(),
-        celular: celular.trim(),
-        filhos: [...filhosNormalizados],
-        presentes: [...presentes],
-        codigoAcesso: codigoAcessoGerado,
-      };
-
-      eventoAtualizado = {
-        ...eventoAtual,
-        participantes: [...participantes, novoParticipante],
+      accessCode = createUniqueCode();
+      const newParticipant = createNewParticipant(accessCode);
+      updatedEvent = {
+        ...currentEvent,
+        participantes: [...eventParticipants, newParticipant],
       };
     }
 
     try {
-      await window.storage.set(
-        `evento:${eventoAtual.codigo}`,
-        JSON.stringify(eventoAtualizado)
-      );
-      setEventoAtual(eventoAtualizado);
-      setEventos({ ...eventos, [eventoAtual.codigo]: eventoAtualizado });
-
-      // Mostra o código na tela
-      setCodigoCadastro(codigoAcessoGerado);
-      // Mensagem diferente se foi atualização ou novo cadastro
-      if (participanteExistente) {
-        setSuccessMessage("Cadastro atualizado com sucesso!");
-      } else {
-        setSuccessMessage("✓ Cadastrado com sucesso!");
-      }
-
-      setNomeParticipante("");
-      setCelular("");
-      setFilhos([]);
-      setPresentes([]);
+      await saveEventToStorage(updatedEvent);
+      showSuccessMessage(!!existingParticipant, accessCode);
     } catch (error) {
       alert("Erro ao cadastrar. Tente novamente.", error);
     }
   };
 
-  const verResultado = () => {
-    const participantes = eventoAtual.participantes || [];
-    const participante = participantes.find(
-      (p) => p.codigoAcesso === codigoParticipante.toUpperCase()
+  // ===== View Result After Draw =====
+  const showParticipantResult = () => {
+    const foundParticipant = eventParticipants.find(
+      (p) => p.codigoAcesso === eventParticipantId.toUpperCase()
     );
 
-    if (!participante) {
+    if (!foundParticipant) {
       alert("Código inválido!");
       return;
     }
 
-    setEventoAtual({ ...eventoAtual, participanteAtual: participante });
-    setView("resultado");
+    updateCurrentEvent({ ...currentEvent, participanteAtual: foundParticipant });
+    updateView("resultado");
+  };
+
+  // ===== Render Helpers =====
+  const renderChildGiftItem = (child, childIndex) => {
+    const normalized = normalizeChild(child);
+    const { nome: childNameDisplay, presentes: childGifts } = normalized;
+
+    return (
+      <div key={childIndex} className="bg-gray-50 p-3 rounded">
+        <div className="flex items-center justify-between">
+          <span className="font-medium">{childNameDisplay}</span>
+          <button
+            onClick={() => removeParticipantChild(childIndex)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="mt-2">
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Sugestão para este filho"
+              value={childrenNewGift[childIndex] || ""}
+              onChange={(e) =>
+                updateChildrenGift({
+                  ...childrenNewGift,
+                  [childIndex]: e.target.value,
+                })
+              }
+              onKeyPress={(e) => e.key === "Enter" && addChildGift(childIndex)}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+            />
+            <button
+              onClick={() => addChildGift(childIndex)}
+              className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+
+          {childGifts.length > 0 && (
+            <div className="space-y-1">
+              {childGifts.map((gift, giftIndex) => (
+                <div
+                  key={giftIndex}
+                  className="flex items-center justify-between bg-white px-3 py-1 rounded"
+                >
+                  <span className="text-sm text-gray-700">{gift}</span>
+                  <button
+                    onClick={() => removeChildGift(childIndex, giftIndex)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderParticipantListItem = (participant) => {
+    const childrenNames =
+      participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) || [];
+    const hasGifts = participant.presentes?.length > 0;
+    const hasChildGifts = participant.filhos?.some(
+      (f) => typeof f !== "string" && f.presentes?.length > 0
+    );
+
+    return (
+      <div key={participant.id} className="text-sm text-gray-700">
+        {participant.nome}
+        {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
+        
+        {hasGifts && (
+          <div className="text-xs text-gray-500 mt-1">
+            Sugestões: {participant.presentes.join(", ")}
+          </div>
+        )}
+        
+        {hasChildGifts && (
+          <div className="text-xs text-gray-500 mt-1">
+            {participant.filhos.map((child, i) => {
+              const normalized = normalizeChild(child);
+              return normalized.presentes.length > 0 ? (
+                <div key={i}>
+                  Sugestões ({normalized.nome}): {normalized.presentes.join(", ")}
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSuccessCard = () => (
+    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
+      <p className="text-green-800 font-semibold mb-2">{successMessage}</p>
+      <p className="text-sm text-green-700 mb-3">
+        Guarde este código para ver seu amigo secreto depois do sorteio:
+      </p>
+      <div className="bg-white border border-green-500 rounded-lg p-4 mb-3 flex items-center justify-between">
+        <p className="text-3xl font-bold text-green-600 tracking-wider">
+          {participantCode}
+        </p>
+        <CopyButton text={participantCode} />
+      </div>
+    </div>
+  );
+
+  const renderRegistrationForm = () => (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Seu Nome
+        </label>
+        <input
+          type="text"
+          placeholder="Digite seu nome"
+          value={participantName}
+          onChange={(e) => updateParticipantName(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          WhatsApp (com DDD)
+        </label>
+        <input
+          type="tel"
+          placeholder="(11) 99999-9999"
+          value={participantPhone}
+          onChange={handleCelularChange}
+          maxLength={15}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+        />
+      </div>
+
+      <div className="mb-6 pb-6 border-b">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Minhas sugestões de presentes
+        </label>
+        <div className="flex gap-2 mb-2">
+          <input
+            type="text"
+            placeholder="Ex: Livro, camiseta, caneca..."
+            value={newGift}
+            onChange={(e) => updateNewGift(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && addGift()}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+          />
+          <button
+            onClick={addGift}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+
+        {gifts.length > 0 && (
+          <div className="space-y-2">
+            {gifts.map((gift, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
+              >
+                <span className="text-sm">{gift}</span>
+                <button
+                  onClick={() => removeGift(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Filhos (sem celular)
+        </label>
+        <div className="flex gap-2 mb-2">
+          <input
+            type="text"
+            placeholder="Nome do filho"
+            value={childName}
+            onChange={(e) => updateChildName(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && addParticipantChild()}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+          />
+          <button
+            onClick={addParticipantChild}
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+
+        {participantsChildren.length > 0 && (
+          <div className="space-y-2">
+            {participantsChildren.map((child, index) =>
+              renderChildGiftItem(child, index)
+            )}
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={registerParticipant}
+        className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
+      >
+        {findExistingParticipant() ? "Atualizar Cadastro" : "Cadastrar"}
+      </button>
+
+      {currentEvent && !isDrawComplete && participantName === "" && (
+        <div className="py-4">
+          <QRCodeCard
+            url={`${window.location.origin}?code=${currentEvent.codigo}`}
+            label="Compartilhe este evento"
+            size={200}
+            eventName={currentEvent.nome}
+          />
+        </div>
+      )}
+
+      <div>
+        <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
+          Participantes: {calculateTotalParticipants(eventParticipants)}
+          {hasChildren ? ", incluindo filhos" : ""}
+        </p>
+        <div className="space-y-1">
+          {eventParticipants
+            .slice()
+            .sort((a, b) =>
+              a.nome.localeCompare(b.nome, undefined, { sensitivity: "base" })
+            )
+            .map(renderParticipantListItem)}
+        </div>
+      </div>
+    </>
+  );
+
+  const renderDrawCompletedView = () => (
+    <div className="space-y-4">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+        <p className="text-green-800 font-semibold">Sorteio já realizado!</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Digite seu código de acesso
+        </label>
+        <input
+          type="text"
+          placeholder="Código recebido no cadastro"
+          value={eventParticipantId}
+          onChange={(e) => updateEventParticipantId(e.target.value.toUpperCase())}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
+        />
+        <button
+          onClick={showParticipantResult}
+          className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
+        >
+          Ver Meu Amigo Secreto
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderEventContent = () => {
+    if (!currentEvent) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <Spinner size={40} />
+        </div>
+      );
+    }
+
+    if (isDrawComplete) {
+      return renderDrawCompletedView();
+    }
+
+    return (
+      <div className="space-y-4">
+        {participantCode && renderSuccessCard()}
+        {!participantCode && renderRegistrationForm()}
+      </div>
+    );
   };
 
   return (
@@ -199,7 +533,7 @@ export default function EventoParticipante({
       <div className="max-w-md mx-auto pt-12">
         <Header />
         <button
-          onClick={() => setView("home")}
+          onClick={() => updateView("home")}
           className="mb-4 text-gray-600 hover:text-gray-800"
         >
           ← Voltar
@@ -207,331 +541,19 @@ export default function EventoParticipante({
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {eventoAtual.nome}
+            {currentEvent?.nome}
           </h2>
-          {eventoAtual.valorSugerido && (
+          
+          {currentEvent?.valorSugerido && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">
                 Valor sugerido:{" "}
-                <span className="font-bold">
-                  R$ {eventoAtual.valorSugerido}
-                </span>
+                <span className="font-bold">R$ {currentEvent.valorSugerido}</span>
               </p>
             </div>
           )}
 
-          {/* show spinner if evento not ready */}
-          {!eventoAtual && (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size={40} />
-            </div>
-          )}
-
-          {!eventoAtual.sorteado ? (
-            <div className="space-y-4">
-              {codigoCadastro && (
-                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-                  <p className="text-green-800 font-semibold mb-2">
-                    {successMessage}
-                  </p>
-                  <p className="text-sm text-green-700 mb-3">
-                    Guarde este código para ver seu amigo secreto depois do
-                    sorteio:
-                  </p>
-                  <div className="bg-white border border-green-500 rounded-lg p-4 mb-3 flex items-center justify-between">
-                    <p className="text-3xl font-bold text-green-600 tracking-wider">
-                      {codigoCadastro}
-                    </p>
-                    <CopyButton text={codigoCadastro} />
-                  </div>
-                </div>
-              )}
-
-              {!codigoCadastro && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Seu Nome
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Digite seu nome"
-                      value={nomeParticipante}
-                      onChange={(e) => setNomeParticipante(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      WhatsApp (com DDD)
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="(11) 99999-9999"
-                      value={celular}
-                      onChange={handleCelularChange}
-                      maxLength={15}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-
-                  <div className="mb-6 pb-6 border-b">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Minhas sugestões de presentes
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        placeholder="Ex: Livro, camiseta, caneca..."
-                        value={novoPresente}
-                        onChange={(e) => setNovoPresente(e.target.value)}
-                        onKeyPress={(e) =>
-                          e.key === "Enter" && adicionarPresente()
-                        }
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-                      />
-                      <button
-                        onClick={adicionarPresente}
-                        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {presentes.length > 0 && (
-                      <div className="space-y-2">
-                        {presentes.map((pres, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
-                          >
-                            <span className="text-sm">{pres}</span>
-                            <button
-                              onClick={() => removerPresente(index)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Filhos (sem celular)
-                    </label>
-                    <div className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        placeholder="Nome do filho"
-                        value={nomeFilho}
-                        onChange={(e) => setNomeFilho(e.target.value)}
-                        onKeyPress={(e) =>
-                          e.key === "Enter" && adicionarFilho()
-                        }
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-                      />
-                      <button
-                        onClick={adicionarFilho}
-                        className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
-
-                    {filhos.length > 0 && (
-                      <div className="space-y-2">
-                        {filhos.map((filho, index) => {
-                          const nome =
-                            typeof filho === "string" ? filho : filho.nome;
-                          const presentesFilho =
-                            typeof filho === "string"
-                              ? []
-                              : filho.presentes || [];
-                          return (
-                            <div key={index} className="bg-gray-50 p-3 rounded">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium">{nome}</span>
-                                <button
-                                  onClick={() => removerFilho(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-
-                              <div className="mt-2">
-                                <div className="flex gap-2 mb-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Sugestão para este filho"
-                                    value={novoPresenteFilhos[index] || ""}
-                                    onChange={(e) =>
-                                      setNovoPresenteFilhos({
-                                        ...novoPresenteFilhos,
-                                        [index]: e.target.value,
-                                      })
-                                    }
-                                    onKeyPress={(e) =>
-                                      e.key === "Enter" &&
-                                      adicionarPresenteFilho(index)
-                                    }
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                                  />
-                                  <button
-                                    onClick={() =>
-                                      adicionarPresenteFilho(index)
-                                    }
-                                    className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
-                                </div>
-
-                                {presentesFilho.length > 0 && (
-                                  <div className="space-y-1">
-                                    {presentesFilho.map((pres, pi) => (
-                                      <div
-                                        key={pi}
-                                        className="flex items-center justify-between bg-white px-3 py-1 rounded"
-                                      >
-                                        <span className="text-sm text-gray-700">
-                                          {pres}
-                                        </span>
-                                        <button
-                                          onClick={() =>
-                                            removerPresenteFilho(index, pi)
-                                          }
-                                          className="text-red-500 hover:text-red-700"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={cadastrarParticipante}
-                    className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
-                  >
-                    {eventoAtual.participantes?.some(
-                      (p) =>
-                        p.nome === nomeParticipante.trim() ||
-                        p.celular === celular.trim()
-                    )
-                      ? "Atualizar Cadastro"
-                      : "Cadastrar"}
-                  </button>
-
-                  {/* Show QR if this view was opened as event (no participant prefilled) and not yet sorteado */}
-                  {eventoAtual &&
-                    !eventoAtual.sorteado &&
-                    nomeParticipante === "" && (
-                      <div className="py-4">
-                        <QRCodeCard
-                          url={`${window.location.origin}?code=${eventoAtual.codigo}`}
-                          label="Compartilhe este evento"
-                          size={200}
-                          eventName={eventoAtual.nome}
-                        />
-                      </div>
-                    )}
-
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
-                      Participantes: {calculateTotalParticipants(participantes)}
-                      {hasAnyFilhos ? ", incluindo filhos" : ""}
-                    </p>
-                    <div className="space-y-1">
-                      {participantes
-                        .slice()
-                        .sort((a, b) =>
-                          a.nome.localeCompare(b.nome, undefined, {
-                            sensitivity: "base",
-                          })
-                        )
-                        .map((p) => (
-                          <div key={p.id} className="text-sm text-gray-700">
-                            {p.nome}{" "}
-                            {p.filhos &&
-                              p.filhos.length > 0 &&
-                              `(+ ${p.filhos
-                                .map((f) =>
-                                  typeof f === "string" ? f : f.nome
-                                )
-                                .join(", ")})`}
-                            {p.presentes && p.presentes.length > 0 && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                Sugestões: {p.presentes.join(", ")}
-                              </div>
-                            )}
-                            {p.filhos && p.filhos.length > 0 && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {p.filhos.map((f, i) => {
-                                  const filhoObj =
-                                    typeof f === "string" ? null : f;
-                                  const nomeFilho = filhoObj
-                                    ? filhoObj.nome
-                                    : f;
-                                  const presentesFilho = filhoObj
-                                    ? filhoObj.presentes || []
-                                    : [];
-                                  return presentesFilho.length > 0 ? (
-                                    <div key={i}>
-                                      Sugestões ({nomeFilho}):{" "}
-                                      {presentesFilho.join(", ")}
-                                    </div>
-                                  ) : null;
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                <p className="text-green-800 font-semibold">
-                  Sorteio já realizado!
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Digite seu código de acesso
-                </label>
-                <input
-                  type="text"
-                  placeholder="Código recebido no cadastro"
-                  value={codigoParticipante}
-                  onChange={(e) =>
-                    setCodigoParticipante(e.target.value.toUpperCase())
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-                />
-                <button
-                  onClick={verResultado}
-                  className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition"
-                >
-                  Ver Meu Amigo Secreto
-                </button>
-              </div>
-            </div>
-          )}
+          {renderEventContent()}
         </div>
         <Footer />
       </div>

@@ -3,70 +3,68 @@ import ErrorScreen from "./components/common/ErrorScreen";
 import AdminEvento from "./components/event/EventAdmin";
 import CriarEvento from "./components/event/EventCreate";
 import Home from "./components/event/EventHome";
-import EventoParticipante from "./components/event/EventParticipant";
-import Resultado from "./components/event/Results";
+import EventParticipant from "./components/event/EventParticipant";
+import SecretSantaResults from "./components/event/EventResults";
 import { validateHash } from "./utils/helpers";
 
-export default function AmigoSecreto() {
+/**
+ * SecretSantaApp is the main component of the Secret Santa web app.
+ * It handles app state and navigation between different views.
+ */
+export default function SecretSantaApp() {
   const [view, setView] = useState("home");
-  const [eventos, setEventos] = useState({});
-  const [eventoAtual, setEventoAtual] = useState(null);
+  const [eventList, setEventList] = useState({});
+  const [currentEvent, setCurrentEvent] = useState(null);
   const [loading, setLoading] = useState(false);
   const [storageError, setStorageError] = useState(null);
-  const [codigoAcesso, setCodigoAcesso] = useState("");
+  const [accessCode, setAccessCode] = useState("");
 
-  // Estados para participante
-  const [nomeParticipante, setNomeParticipante] = useState("");
-  const [celular, setCelular] = useState("");
-  const [filhos, setFilhos] = useState([]);
-  const [presentes, setPresentes] = useState([]);
+  // Participant form states
+  const [participantName, setParticipantName] = useState("");
+  const [participantMobileNumber, setParticipantMobileNumber] = useState("");
+  const [participantChildren, setParticipantChildren] = useState([]);
+  const [gifts, setGifts] = useState([]);
 
   useEffect(() => {
-    // On mount, load events and, if a ?code=... query param is present,
-    // try to open that event automatically (useful for QR links).
-    const init = async () => {
-      // If storage initialization failed, show the error screen
+    const initializeStorage = async () => {
       try {
-        if (window.storage && window.storage.initError) {
+        if (window.storage?.initError) {
           setStorageError(window.storage.initError);
           return;
         }
-      } catch (err) {
-        console.error("Erro ao verificar storage/init:", err);
+      } catch (error) {
+        console.error("Erro ao verificar storage/init:", error);
       }
 
-      await carregarEventos();
+      await loadEvents();
+
       try {
-        const params = new URLSearchParams(window.location.search);
-        const codeParam = params.get("code");
+        const urlQueryParams = new URLSearchParams(window.location.search);
+        const codeParam = urlQueryParams.get("code");
         if (codeParam) {
-          // Try to access event using the code from URL
-          await acessarEvento(codeParam);
+          await fetchEventByCode(codeParam);
         }
-      } catch (err) {
-        console.error("Erro ao processar query params:", err);
+      } catch (error) {
+        console.error("Erro ao processar query params:", error);
       }
     };
 
-    init();
+    initializeStorage();
   }, []);
 
-  const carregarEventos = async () => {
+  const loadEvents = async () => {
     setLoading(true);
     try {
       const keys = await window.storage.list("evento:");
-      const eventosCarregados = {};
+      const loadedEvents = {};
 
       for (const key of keys.keys) {
         const result = await window.storage.get(key);
         if (result) {
-          eventosCarregados[key.replace("evento:", "")] = JSON.parse(
-            result.value
-          );
+          loadedEvents[key.replace("evento:", "")] = JSON.parse(result.value);
         }
       }
-
-      setEventos(eventosCarregados);
+      setEventList(loadedEvents);
     } catch (error) {
       console.log("Nenhum evento encontrado ainda", error);
       setStorageError(error);
@@ -75,98 +73,118 @@ export default function AmigoSecreto() {
     }
   };
 
-  const acessarEvento = async (codeArg) => {
+  const checkAdminCode = async (formattedCode, parsedEvent) => {
+    if (parsedEvent.codigoAdminHash) {
+      return await validateHash(formattedCode, parsedEvent.codigoAdminHash);
+    }
+    return parsedEvent.codigoAdmin === formattedCode;
+  };
+
+  const findParticipantByCode = (eventParticipants, formattedCode) => {
+    return eventParticipants.find((p) => p.codigoAcesso === formattedCode);
+  };
+
+  const searchEventByCode = async (formattedCode) => {
+    const keys = await window.storage.list("evento:");
+
+    for (const key of keys.keys) {
+      const eventResult = await window.storage.get(key);
+      if (!eventResult) continue;
+
+      const parsedEvent = JSON.parse(eventResult.value);
+      const eventParticipants = parsedEvent.participantes || [];
+
+      const isAdmin = await checkAdminCode(formattedCode, parsedEvent);
+      if (isAdmin) {
+        return {
+          foundEvent: parsedEvent,
+          isAdmin: true,
+          foundParticipant: null,
+        };
+      }
+
+      const foundParticipant = findParticipantByCode(
+        eventParticipants,
+        formattedCode
+      );
+      if (foundParticipant) {
+        return { foundEvent: parsedEvent, isAdmin: false, foundParticipant };
+      }
+    }
+
+    return { foundEvent: null, isAdmin: false, foundParticipant: null };
+  };
+
+  const handleAdminAccess = (foundEvent, formattedCode) => {
+    setCurrentEvent({ ...foundEvent, codigoAdmin: formattedCode });
+    setView("admin");
+    setAccessCode("");
+  };
+
+  const handleExistingParticipantWithDraw = (foundEvent, foundParticipant) => {
+    setCurrentEvent({ ...foundEvent, participanteAtual: foundParticipant });
+    setView("resultado");
+    setAccessCode("");
+  };
+
+  const handleExistingParticipantNoDraw = (foundEvent, foundParticipant) => {
+    setCurrentEvent(foundEvent);
+    setParticipantName(foundParticipant.nome);
+    setParticipantMobileNumber(foundParticipant.celular);
+    setParticipantChildren(foundParticipant.filhos || []);
+    setGifts(foundParticipant.presentes || []);
+    setView("evento");
+    setAccessCode("");
+  };
+
+  const handleNewParticipant = (foundEvent) => {
+    setCurrentEvent(foundEvent);
+    setParticipantName("");
+    setParticipantMobileNumber("");
+    setParticipantChildren([]);
+    setGifts([]);
+    setView("evento");
+    setAccessCode("");
+  };
+
+  const fetchEventByCode = async (codeArg) => {
     setLoading(true);
-    const codigo = (codeArg || codigoAcesso || "").toUpperCase();
+    const formattedCode = (codeArg || accessCode || "").toUpperCase();
 
     try {
-      // Primeiro tenta acessar diretamente como código do evento
-      let result = await window.storage.get(`evento:${codigo}`);
-      let eventoEncontrado = null;
-      let participanteEncontrado = null;
+      const directResult = await window.storage.get(`evento:${formattedCode}`);
+      let foundEvent = directResult ? JSON.parse(directResult.value) : null;
       let isAdmin = false;
+      let foundParticipant = null;
 
-      // Se não encontrou, procura em todos os eventos
-      if (!result) {
-        const keys = await window.storage.list("evento:");
-        for (const key of keys.keys) {
-          const eventoResult = await window.storage.get(key);
-          if (eventoResult) {
-            const evento = JSON.parse(eventoResult.value);
-            const participantes = evento.participantes || [];
-
-            // Verifica se é código admin (usando hash)
-            if (evento.codigoAdminHash) {
-              const isAdminCode = await validateHash(
-                codigo,
-                evento.codigoAdminHash
-              );
-              if (isAdminCode) {
-                eventoEncontrado = evento;
-                isAdmin = true;
-                break;
-              }
-            }
-            // Fallback para código admin em texto (eventos antigos)
-            else if (evento.codigoAdmin === codigo) {
-              eventoEncontrado = evento;
-              isAdmin = true;
-              break;
-            }
-
-            // Verifica se é código de participante
-            const participante = participantes.find(
-              (p) => p.codigoAcesso === codigo
-            );
-            if (participante) {
-              eventoEncontrado = evento;
-              participanteEncontrado = participante;
-              break;
-            }
-          }
-        }
-      } else {
-        eventoEncontrado = JSON.parse(result.value);
+      if (!foundEvent) {
+        const searchResult = await searchEventByCode(formattedCode);
+        foundEvent = searchResult.foundEvent;
+        isAdmin = searchResult.isAdmin;
+        foundParticipant = searchResult.foundParticipant;
       }
 
-      if (eventoEncontrado) {
-        // Verifica se é código admin
-        if (isAdmin) {
-          setEventoAtual({ ...eventoEncontrado, codigoAdmin: codigo }); // Mantém código para a sessão
-          setView("admin");
-        }
-        // Verifica se é código de participante
-        else if (participanteEncontrado) {
-          // Se já foi sorteado, vai direto para resultado
-          if (eventoEncontrado.sorteado) {
-            setEventoAtual({
-              ...eventoEncontrado,
-              participanteAtual: participanteEncontrado,
-            });
-            setView("resultado");
-          } else {
-            // Se não foi sorteado, permite editar dados
-            setEventoAtual(eventoEncontrado);
-            setNomeParticipante(participanteEncontrado.nome);
-            setCelular(participanteEncontrado.celular);
-            setFilhos(participanteEncontrado.filhos || []);
-            setPresentes(participanteEncontrado.presentes || []);
-            setView("evento");
-          }
-        }
-        // Código do evento (novo participante)
-        else {
-          setEventoAtual(eventoEncontrado);
-          setNomeParticipante("");
-          setCelular("");
-          setFilhos([]);
-          setPresentes([]);
-          setView("evento");
-        }
-        setCodigoAcesso("");
-      } else {
+      if (!foundEvent) {
         alert("Código não encontrado!");
+        return;
       }
+
+      if (isAdmin) {
+        handleAdminAccess(foundEvent, formattedCode);
+        return;
+      }
+
+      if (foundParticipant && foundEvent.sorteado) {
+        handleExistingParticipantWithDraw(foundEvent, foundParticipant);
+        return;
+      }
+
+      if (foundParticipant) {
+        handleExistingParticipantNoDraw(foundEvent, foundParticipant);
+        return;
+      }
+
+      handleNewParticipant(foundEvent);
     } catch (error) {
       console.error("Erro ao acessar evento:", error);
       setStorageError(error);
@@ -175,51 +193,63 @@ export default function AmigoSecreto() {
     }
   };
 
-  // Recupera evento/participante a partir do celular (esqueci meu código)
-  const recuperarPorCelular = async (celularInput) => {
+  const matchesPhoneNumber = (storedPhone, inputPhone) => {
+    const cleanStored = (storedPhone || "").replace(/\D/g, "");
+    return (
+      cleanStored === inputPhone ||
+      cleanStored.endsWith(inputPhone) ||
+      inputPhone.endsWith(cleanStored)
+    );
+  };
+
+  const findParticipantByPhone = async (cleanedMobileNumber) => {
+    const keys = await window.storage.list("evento:");
+
+    for (const key of keys.keys) {
+      const fetchedEvent = await window.storage.get(key);
+      if (!fetchedEvent) continue;
+
+      const parsedEvent = JSON.parse(fetchedEvent.value);
+      const participantsList = parsedEvent.participantes || [];
+
+      const participant = participantsList.find((p) =>
+        matchesPhoneNumber(p.celular, cleanedMobileNumber)
+      );
+
+      if (participant) {
+        return { event: parsedEvent, participant };
+      }
+    }
+
+    return null;
+  };
+
+  const retrieveParticipantByPhone = async (mobileNumberInput) => {
     setLoading(true);
+
     try {
-      const digits = (celularInput || "").replace(/\D/g, "");
-      if (!digits) {
+      const cleanedMobileNumber = (mobileNumberInput || "").replace(/\D/g, "");
+
+      if (!cleanedMobileNumber) {
         alert("Informe o celular (com DDD)");
         return;
       }
 
-      const keys = await window.storage.list("evento:");
-      for (const key of keys.keys) {
-        const eventoResult = await window.storage.get(key);
-        if (!eventoResult) continue;
-        const evento = JSON.parse(eventoResult.value);
-        const participantes = evento.participantes || [];
-        const participante = participantes.find((p) => {
-          const pDigits = (p.celular || "").replace(/\D/g, "");
-          return (
-            pDigits === digits ||
-            pDigits.endsWith(digits) ||
-            digits.endsWith(pDigits)
-          );
-        });
+      const result = await findParticipantByPhone(cleanedMobileNumber);
 
-        if (participante) {
-          // If the event already has a resultado/sorteio, go to resultado view
-          if (evento.sorteado) {
-            setEventoAtual({ ...evento, participanteAtual: participante });
-            setView("resultado");
-            setCodigoAcesso("");
-            return;
-          }
-          // Otherwise, prefill participant fields and go to event form
-          setEventoAtual(evento);
-          setNomeParticipante(participante.nome || "");
-          setCelular(participante.celular || "");
-          setFilhos(participante.filhos || []);
-          setPresentes(participante.presentes || []);
-          setView("evento");
-          setCodigoAcesso("");
-          return;
-        }
+      if (!result) {
+        alert("Celular não encontrado. Verifique o número e tente novamente.");
+        return;
       }
-      alert("Celular não encontrado. Verifique o número e tente novamente.");
+
+      const { event: parsedEvent, participant } = result;
+
+      if (parsedEvent.sorteado) {
+        handleExistingParticipantWithDraw(parsedEvent, participant);
+        return;
+      }
+
+      handleExistingParticipantNoDraw(parsedEvent, participant);
     } catch (error) {
       console.error("Erro ao recuperar por celular:", error);
       setStorageError(error);
@@ -228,7 +258,7 @@ export default function AmigoSecreto() {
     }
   };
 
-  // Renderiza componente baseado na view
+  // Render different views based on current state
   if (storageError) {
     return (
       <ErrorScreen
@@ -240,14 +270,15 @@ export default function AmigoSecreto() {
       />
     );
   }
+
   if (view === "home") {
     return (
       <Home
         setView={setView}
-        codigoAcesso={codigoAcesso}
-        setCodigoAcesso={setCodigoAcesso}
-        acessarEvento={acessarEvento}
-        recuperarPorCelular={recuperarPorCelular}
+        codigoAcesso={accessCode}
+        setCodigoAcesso={setAccessCode}
+        acessarEvento={fetchEventByCode}
+        recuperarPorCelular={retrieveParticipantByPhone}
         loading={loading}
       />
     );
@@ -257,29 +288,29 @@ export default function AmigoSecreto() {
     return (
       <CriarEvento
         setView={setView}
-        eventos={eventos}
-        setEventos={setEventos}
-        setEventoAtual={setEventoAtual}
+        eventos={eventList}
+        setEventos={setEventList}
+        setEventoAtual={setCurrentEvent}
       />
     );
   }
 
   if (view === "evento") {
     return (
-      <EventoParticipante
-        eventoAtual={eventoAtual}
-        setEventoAtual={setEventoAtual}
-        eventos={eventos}
-        setEventos={setEventos}
+      <EventParticipant
+        eventoAtual={currentEvent}
+        setEventoAtual={setCurrentEvent}
+        eventos={eventList}
+        setEventos={setEventList}
         setView={setView}
-        nomeParticipante={nomeParticipante}
-        setNomeParticipante={setNomeParticipante}
-        celular={celular}
-        setCelular={setCelular}
-        filhos={filhos}
-        setFilhos={setFilhos}
-        presentes={presentes}
-        setPresentes={setPresentes}
+        nomeParticipante={participantName}
+        setNomeParticipante={setParticipantName}
+        celular={participantMobileNumber}
+        setCelular={setParticipantMobileNumber}
+        filhos={participantChildren}
+        setFilhos={setParticipantChildren}
+        presentes={gifts}
+        setPresentes={setGifts}
         loading={loading}
       />
     );
@@ -288,10 +319,10 @@ export default function AmigoSecreto() {
   if (view === "admin") {
     return (
       <AdminEvento
-        eventoAtual={eventoAtual}
-        setEventoAtual={setEventoAtual}
-        eventos={eventos}
-        setEventos={setEventos}
+        eventoAtual={currentEvent}
+        setEventoAtual={setCurrentEvent}
+        eventos={eventList}
+        setEventos={setEventList}
         setView={setView}
         loading={loading}
       />
@@ -300,11 +331,11 @@ export default function AmigoSecreto() {
 
   if (view === "resultado") {
     return (
-      <Resultado
-        eventoAtual={eventoAtual}
+      <SecretSantaResults
+        eventoAtual={currentEvent}
         setView={setView}
-        setEventoAtual={setEventoAtual}
-        setCodigoAcesso={setCodigoAcesso}
+        setEventoAtual={setCurrentEvent}
+        setCodigoAcesso={setAccessCode}
       />
     );
   }

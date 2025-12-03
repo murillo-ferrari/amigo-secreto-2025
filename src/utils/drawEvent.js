@@ -4,7 +4,7 @@ export const performSecretSantaDraw = async (
   events,
   setEvents
 ) => {
-  // Conta total de participantes incluindo filhos
+  // Check if there are at least 2 participants
   let totalParticipants = 0;
   currentEvent.participantes.forEach((p) => {
     totalParticipants++;
