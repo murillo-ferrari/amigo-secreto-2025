@@ -1,11 +1,10 @@
-// src/components/EventoParticipante.jsx
-import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { createUniqueCode, formatMobileNumber, calculateTotalParticipants, verifyMobileNumber } from '../../utils/helpers';
-import Header from '../layout/Header';
-import Footer from '../layout/Footer';
+import { useState } from 'react';
+import { calculateTotalParticipants, createUniqueCode, formatMobileNumber, verifyMobileNumber } from '../../utils/helpers';
 import CopyButton from '../common/CopyButton';
 import Spinner from '../common/Spinner';
+import Footer from '../layout/Footer';
+import Header from '../layout/Header';
 import QRCodeCard from './QRCode';
 
 export default function EventoParticipante({

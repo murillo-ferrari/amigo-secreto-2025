@@ -1,6 +1,5 @@
-// src/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get, remove, query, orderByKey, startAt, endAt } from 'firebase/database';
+import { get, getDatabase, ref, remove, set } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,

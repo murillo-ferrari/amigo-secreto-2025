@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { createUniqueCode, hashCode } from '../../utils/helpers';
-import Header from '../layout/Header';
 import Footer from '../layout/Footer';
+import Header from '../layout/Header';
 import QRCodeCard from './QRCode';
 
 export default function CriarEvento({ setView, eventos, setEventos, setEventoAtual }) {

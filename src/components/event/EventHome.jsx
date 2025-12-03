@@ -1,5 +1,5 @@
-import Header from '../layout/Header';
 import Footer from '../layout/Footer';
+import Header from '../layout/Header';
 import RecuperarCodigo from './EventRecoverCode';
 
 export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEvento, recuperarPorCelular, loading }) {

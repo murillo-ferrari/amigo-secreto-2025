@@ -1,4 +1,3 @@
-// src/components/AdminEvento.jsx
 import { Shuffle, Trash, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 import { performSecretSantaDraw } from '../../utils/drawEvent';

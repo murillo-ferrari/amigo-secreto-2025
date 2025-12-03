@@ -1,8 +1,7 @@
-import { Gift, Send } from 'lucide-react';
 // import { gerarLinkWhatsApp } from '../utils/helpers';
-import Header from '../layout/Header';
-import Footer from '../layout/Footer';
 import CopyButton from '../common/CopyButton';
+import Footer from '../layout/Footer';
+import Header from '../layout/Header';
 
 
 export default function Resultado({ eventoAtual, setView, setEventoAtual, setCodigoAcesso }) {

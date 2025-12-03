@@ -1,12 +1,11 @@
-// src/App.jsx
-import React, { useState, useEffect } from 'react';
-import Home from './components/event/EventHome';
-import CriarEvento from './components/event/EventCreate';
-import EventoParticipante from './components/event/EventParticipant';
+import { useEffect, useState } from 'react';
+import ErrorScreen from './components/common/ErrorScreen';
 import AdminEvento from './components/event/EventAdmin';
+import CriarEvento from './components/event/EventCreate';
+import Home from './components/event/EventHome';
+import EventoParticipante from './components/event/EventParticipant';
 import Resultado from './components/event/Results';
 import { validateHash } from './utils/helpers';
-import ErrorScreen from './components/common/ErrorScreen';
 
 export default function AmigoSecreto() {
   const [view, setView] = useState('home');

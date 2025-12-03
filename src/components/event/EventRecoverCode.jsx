@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { formatMobileNumber, verifyMobileNumber } from '../../utils/helpers';
 
 export default function RecuperarCodigo({ recuperarPorCelular, loading }) {
