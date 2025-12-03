@@ -23,8 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-database.rules.json
-
 # local env files
 .env.local
 .env.development.local
