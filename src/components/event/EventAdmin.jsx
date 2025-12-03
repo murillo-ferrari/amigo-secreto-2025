@@ -44,13 +44,25 @@ export default function AdminEvento({
       valorSugerido: editValue || undefined,
     };
 
+    // Only store the hashed admin code, not the plain text code
+    const eventToStore = { ...updatedEvent };
+    if (Object.prototype.hasOwnProperty.call(eventToStore, "codigoAdmin")) {
+      delete eventToStore.codigoAdmin;
+    }
+
     try {
       await window.storage.set(
         `evento:${currentEvent.codigo}`,
-        JSON.stringify(updatedEvent)
+        JSON.stringify(eventToStore)
       );
-      updateCurrentEvent(updatedEvent);
-      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+      // Keep the plain admin code in-memory/state for the current session/UI,
+      // but avoid persisting it to the database.
+      const updatedEventForState = {
+        ...updatedEvent,
+        codigoAdmin: currentEvent?.codigoAdmin,
+      };
+      updateCurrentEvent(updatedEventForState);
+      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEventForState });
       alert("Dados do evento salvos com sucesso!");
       setIsEditing(false);
     } catch (error) {
@@ -186,7 +198,7 @@ export default function AdminEvento({
           ← Voltar
         </button>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex flex-col bg-white rounded-lg shadow-lg p-6">
           <p className="text-2xl text-gray-800 font-bold mb-2">
             Painel de Administração
           </p>
@@ -211,7 +223,7 @@ export default function AdminEvento({
             </div>
 
             {!isEditing ? (
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-600">
                 <p className="mb-1">
                   <strong>Nome:</strong> {currentEvent.nome}
                 </p>
@@ -225,7 +237,7 @@ export default function AdminEvento({
                 <div className="grid grid-cols-2 gap-3 items-end">
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">
-                      Nome do Evento
+                      <strong>Nome:</strong>
                     </label>
                     <input
                       type="text"
@@ -236,7 +248,7 @@ export default function AdminEvento({
                   </div>
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">
-                      Valor sugerido (opcional)
+                      <strong>Valor sugerido:</strong>
                     </label>
                     <input
                       type="text"
@@ -267,23 +279,22 @@ export default function AdminEvento({
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Código Participantes</p>
-              <div className="flex items-center">
+              <p className="text-sm text-gray-800"><strong>Código Participantes</strong></p>
+              <div className="flex items-center gap-2">
                 <p className="text-2xl font-bold text-blue-600">
                   {currentEvent.codigo}
                 </p>
-                <CopyButton text={currentEvent.codigo} className="ml-2" />
+                <CopyButton text={currentEvent.codigo} />
               </div>
             </div>
             <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Código Admin</p>
-              <div className="flex items-center">
+              <p className="text-sm text-gray-800"><strong>Código Admin</strong></p>
+              <div className="flex items-center gap-2">
                 <p className="text-2xl font-bold text-purple-600">
                   {currentEvent.codigoAdmin}
                 </p>
                 <CopyButton
                   text={currentEvent.codigoAdmin || ""}
-                  className="ml-2"
                 />
               </div>
             </div>
