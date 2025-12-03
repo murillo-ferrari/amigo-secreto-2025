@@ -1,4 +1,4 @@
-import { Shuffle, Trash, Trash2, Users } from "lucide-react";
+import { Settings, Shuffle, Trash, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { performSecretSantaDraw } from "../../utils/drawEvent";
 import { calculateTotalParticipants } from "../../utils/helpers";
@@ -25,6 +25,45 @@ export default function AdminEvento({
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const isDrawn = !!currentEvent?.sorteado;
   const includeChildren = currentEvent?.incluirFilhos ?? true;
+
+  // Editable form state for event metadata
+  const [editName, setEditName] = useState(currentEvent?.nome || "");
+  const [editValue, setEditValue] = useState(currentEvent?.valorSugerido || "");
+  const [isEditing, setIsEditing] = useState(false);
+
+  const saveEventMeta = async () => {
+    const nameTrim = (editName || "").trim();
+    if (!nameTrim) {
+      alert("O nome do evento não pode ficar vazio.");
+      return;
+    }
+
+    const updatedEvent = {
+      ...currentEvent,
+      nome: nameTrim,
+      valorSugerido: editValue || undefined,
+    };
+
+    try {
+      await window.storage.set(
+        `evento:${currentEvent.codigo}`,
+        JSON.stringify(updatedEvent)
+      );
+      updateCurrentEvent(updatedEvent);
+      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+      alert("Dados do evento salvos com sucesso!");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Erro ao salvar dados do evento:", error);
+      alert("Erro ao salvar. Tente novamente.");
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditName(currentEvent?.nome || "");
+    setEditValue(currentEvent?.valorSugerido || "");
+    setIsEditing(false);
+  };
 
   // Avoid calling setState synchronously in an effect (can trigger cascading renders).
   const currentPage = Math.min(Math.max(1, page), totalPages);
@@ -128,11 +167,6 @@ export default function AdminEvento({
     }
   };
 
-  /*  const enviarWhatsApp = (nome, amigo, celular) => {
-     const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.nome, eventoAtual.valorSugerido);
-     window.open(url, '_blank');
-   }; */
-
   if (loading || !currentEvent) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -153,10 +187,83 @@ export default function AdminEvento({
         </button>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            {currentEvent.nome}
-          </h2>
-          <p className="text-gray-600 mb-6">Painel de Administração</p>
+          <p className="text-2xl text-gray-800 font-bold mb-2">
+            Painel de Administração
+          </p>
+
+          <div className="mb-4 bg-gray-100 border-l-4 border-gray-500 p-4 rounded-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800 mb-3">Detalhes do Evento</h3>
+              {!isEditing ? (
+                <button
+                  onClick={() => {
+                    setEditName(currentEvent?.nome || "");
+                    setEditValue(currentEvent?.valorSugerido || "");
+                    setIsEditing(true);
+                  }}
+                  className="text-sm bg-gray-50 border px-3 py-1 rounded hover:bg-gray-100"
+                  aria-label="Editar Evento"
+                  title="Editar Evento"
+                >
+                  <Settings aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
+
+            {!isEditing ? (
+              <div className="text-sm text-gray-700">
+                <p className="mb-1">
+                  <strong>Nome:</strong> {currentEvent.nome}
+                </p>
+                <p>
+                  <strong>Valor sugerido:</strong>{' '}
+                  {currentEvent.valorSugerido ? `R$ ${currentEvent.valorSugerido}` : '—'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3 items-end">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Nome do Evento
+                    </label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">
+                      Valor sugerido (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={saveEventMeta}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Salvar alterações
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    className="bg-white border px-4 py-2 rounded hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
@@ -191,30 +298,46 @@ export default function AdminEvento({
                   if (isDrawn) return;
                   const isChecked = !!event.target.checked;
                   try {
-                    const updatedEvent = { ...currentEvent, incluirFilhos: isChecked };
+                    const updatedEvent = {
+                      ...currentEvent,
+                      incluirFilhos: isChecked,
+                    };
                     await window.storage.set(
                       `evento:${currentEvent.codigo}`,
                       JSON.stringify(updatedEvent)
                     );
                     updateCurrentEvent(updatedEvent);
-                    updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+                    updateEventList({
+                      ...eventList,
+                      [currentEvent.codigo]: updatedEvent,
+                    });
                   } catch (error) {
-                    console.error('Erro ao atualizar opção incluirFilhos:', error);
-                    alert('Erro ao salvar a configuração. Tente novamente.');
+                    console.error(
+                      "Erro ao atualizar opção incluirFilhos:",
+                      error
+                    );
+                    alert("Erro ao salvar a configuração. Tente novamente.");
                   }
                 }}
               />
-              <span className="text-sm text-gray-700">Incluir filhos (sem celular)</span>
+              <span className="text-sm text-gray-700">
+                Incluir filhos (sem celular)
+              </span>
             </label>
             {isDrawn && (
-              <p className="text-xs text-gray-500 mt-1">Não é possível alterar após o sorteio.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Não é possível alterar após o sorteio.
+              </p>
             )}
           </div>
 
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({includeChildren ? calculateTotalParticipants(participants) : participants.length}
+              Participantes (
+              {includeChildren
+                ? calculateTotalParticipants(participants)
+                : participants.length}
               {includeChildren && hasAnyFilhos ? ", incluindo filhos" : ""})
             </h3>
 
