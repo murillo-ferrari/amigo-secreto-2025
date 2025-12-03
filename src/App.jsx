@@ -33,7 +33,7 @@ export default function SecretSantaApp() {
           return;
         }
       } catch (error) {
-        console.error("Erro ao verificar storage/init:", error);
+        console.error("Error checking storage/init:", error);
       }
 
       await loadEvents();
@@ -45,7 +45,7 @@ export default function SecretSantaApp() {
           await fetchEventByCode(codeParam);
         }
       } catch (error) {
-        console.error("Erro ao processar query params:", error);
+        console.error("Error processing query params:", error);
       }
     };
 
@@ -66,8 +66,15 @@ export default function SecretSantaApp() {
       }
       setEventList(loadedEvents);
     } catch (error) {
-      console.log("Nenhum evento encontrado ainda", error);
-      setStorageError(error);
+      // With security rules, listing events may fail (Permission denied)
+      // This is expected - users access events directly by code
+      if (error.message?.includes("Permission denied")) {
+        console.log("Event listing blocked by security rules (expected)");
+        setEventList({});
+      } else {
+        console.log("Error loading events:", error);
+        setStorageError(error);
+      }
     } finally {
       setLoading(false);
     }
@@ -85,19 +92,15 @@ export default function SecretSantaApp() {
   };
 
   const searchEventByCode = async (formattedCode) => {
-    const keys = await window.storage.list("evento:");
+    // With security rules, we cannot list all events.
+    // We only search in events already loaded in memory (eventList).
+    for (const event of Object.values(eventList)) {
+      const eventParticipants = event.participantes || [];
 
-    for (const key of keys.keys) {
-      const eventResult = await window.storage.get(key);
-      if (!eventResult) continue;
-
-      const parsedEvent = JSON.parse(eventResult.value);
-      const eventParticipants = parsedEvent.participantes || [];
-
-      const isAdmin = await checkAdminCode(formattedCode, parsedEvent);
+      const isAdmin = await checkAdminCode(formattedCode, event);
       if (isAdmin) {
         return {
-          foundEvent: parsedEvent,
+          foundEvent: event,
           isAdmin: true,
           foundParticipant: null,
         };
@@ -108,7 +111,7 @@ export default function SecretSantaApp() {
         formattedCode
       );
       if (foundParticipant) {
-        return { foundEvent: parsedEvent, isAdmin: false, foundParticipant };
+        return { foundEvent: event, isAdmin: false, foundParticipant };
       }
     }
 
@@ -152,22 +155,34 @@ export default function SecretSantaApp() {
     const formattedCode = (codeArg || accessCode || "").toUpperCase();
 
     try {
+      // First try to fetch directly by event code
       const directResult = await window.storage.get(`evento:${formattedCode}`);
       let foundEvent = directResult ? JSON.parse(directResult.value) : null;
       let isAdmin = false;
       let foundParticipant = null;
 
-      if (!foundEvent) {
-        const searchResult = await searchEventByCode(formattedCode);
-        foundEvent = searchResult.foundEvent;
-        isAdmin = searchResult.isAdmin;
-        foundParticipant = searchResult.foundParticipant;
-      }
-
-      if (!foundEvent) {
-        alert("Código não encontrado!");
+      // If found directly by event code
+      if (foundEvent) {
+        // Add to memory for future searches
+        setEventList((prev) => ({ ...prev, [foundEvent.codigo]: foundEvent }));
+        // Event code entered - treat as new participant flow
+        handleNewParticipant(foundEvent);
         return;
       }
+      
+      // If not found directly, the code might be admin or participant code
+      // Search in in-memory events
+      const searchResult = await searchEventByCode(formattedCode);
+      
+      if (!searchResult.foundEvent) {
+        // Not found in memory - show helpful message
+        alert("Código não encontrado! Se você está usando um código de participante, primeiro acesse usando o código do evento.");
+        return;
+      }
+      
+      foundEvent = searchResult.foundEvent;
+      isAdmin = searchResult.isAdmin;
+      foundParticipant = searchResult.foundParticipant;
 
       if (isAdmin) {
         handleAdminAccess(foundEvent, formattedCode);
@@ -184,9 +199,10 @@ export default function SecretSantaApp() {
         return;
       }
 
+      // Fallback - shouldn't normally reach here
       handleNewParticipant(foundEvent);
     } catch (error) {
-      console.error("Erro ao acessar evento:", error);
+      console.error("Error accessing event:", error);
       setStorageError(error);
     } finally {
       setLoading(false);
@@ -203,21 +219,40 @@ export default function SecretSantaApp() {
   };
 
   const findParticipantByPhone = async (cleanedMobileNumber) => {
-    const keys = await window.storage.list("evento:");
-
-    for (const key of keys.keys) {
-      const fetchedEvent = await window.storage.get(key);
-      if (!fetchedEvent) continue;
-
-      const parsedEvent = JSON.parse(fetchedEvent.value);
-      const participantsList = parsedEvent.participantes || [];
-
+    // First, try to look up event via phone index
+    if (window.storage.getEventCodeByPhone) {
+      try {
+        const eventCode = await window.storage.getEventCodeByPhone(cleanedMobileNumber);
+        if (eventCode) {
+          // Found event code in phone index, fetch the event
+          const result = await window.storage.get(`evento:${eventCode}`);
+          if (result) {
+            const event = JSON.parse(result.value);
+            const participantsList = event.participantes || [];
+            const participant = participantsList.find((p) =>
+              matchesPhoneNumber(p.celular, cleanedMobileNumber)
+            );
+            if (participant) {
+              // Add to memory for future use
+              setEventList((prev) => ({ ...prev, [event.codigo]: event }));
+              return { event, participant };
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Phone index lookup failed:", error);
+        // Fall through to in-memory search
+      }
+    }
+    
+    // Fallback: search in in-memory events
+    for (const event of Object.values(eventList)) {
+      const participantsList = event.participantes || [];
       const participant = participantsList.find((p) =>
         matchesPhoneNumber(p.celular, cleanedMobileNumber)
       );
-
       if (participant) {
-        return { event: parsedEvent, participant };
+        return { event, participant };
       }
     }
 
@@ -251,7 +286,7 @@ export default function SecretSantaApp() {
 
       handleExistingParticipantNoDraw(parsedEvent, participant);
     } catch (error) {
-      console.error("Erro ao recuperar por celular:", error);
+      console.error("Error recovering by phone:", error);
       setStorageError(error);
     } finally {
       setLoading(false);

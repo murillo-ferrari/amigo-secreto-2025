@@ -164,11 +164,17 @@ export default function EventParticipant({
     );
   };
 
-  const saveEventToStorage = async (updatedEvent) => {
+  const saveEventToStorage = async (updatedEvent, newParticipantPhone = null) => {
     await window.storage.set(
       `evento:${currentEvent.codigo}`,
       JSON.stringify(updatedEvent)
     );
+    
+    // Create phone index for new participant (for phone lookup feature)
+    if (newParticipantPhone && window.storage.setPhoneIndex) {
+      await window.storage.setPhoneIndex(newParticipantPhone, currentEvent.codigo);
+    }
+    
     updateCurrentEvent(updatedEvent);
     updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
   };
@@ -195,6 +201,8 @@ export default function EventParticipant({
     let updatedEvent;
     let accessCode;
 
+    let isNewParticipant = false;
+    
     if (existingParticipant) {
       accessCode = existingParticipant.codigoAcesso;
       updatedEvent = {
@@ -202,6 +210,7 @@ export default function EventParticipant({
         participantes: updateExistingParticipant(existingParticipant),
       };
     } else {
+      isNewParticipant = true;
       accessCode = createUniqueCode();
       const newParticipant = createNewParticipant(accessCode);
       updatedEvent = {
@@ -211,7 +220,8 @@ export default function EventParticipant({
     }
 
     try {
-      await saveEventToStorage(updatedEvent);
+      // Pass phone number for new participants to create phone index
+      await saveEventToStorage(updatedEvent, isNewParticipant ? participantPhone.trim() : null);
       showSuccessMessage(!!existingParticipant, accessCode);
     } catch (error) {
       alert("Erro ao cadastrar. Tente novamente.", error);

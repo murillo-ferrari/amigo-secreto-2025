@@ -1,7 +1,36 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true,
-    ".validate": "newData.hasChildren()"
+    ".read": false,
+    ".write": false,
+
+    "eventos": {
+      ".read": false,
+      ".write": false,
+
+      "$eventId": {
+        ".read": "auth != null",
+        
+        ".write": "auth != null && (!data.exists() || data.child('codigoAdminHash').val() === newData.child('codigoAdminHash').val())",
+        
+        ".validate": "newData.hasChildren(['nome', 'codigo', 'codigoAdminHash']) && newData.child('nome').isString() && newData.child('codigo').isString() && newData.child('codigoAdminHash').isString() && newData.child('nome').val().length > 0 && newData.child('nome').val().length <= 200",
+
+        "participantes": {
+          "$participantId": {
+            ".validate": "newData.hasChildren(['id', 'nome', 'celular', 'codigoAcesso']) && newData.child('id').isString() && newData.child('nome').isString() && newData.child('celular').isString() && newData.child('codigoAcesso').isString() && newData.child('celular').val().matches(/^\\([0-9]{2}\\) [0-9]{4,5}-[0-9]{4}$/)"
+          }
+        }
+      }
+    },
+
+    "phones": {
+      ".read": false,
+      ".write": false,
+
+      "$phoneNumber": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['eventCode']) && newData.child('eventCode').isString()"
+      }
+    }
   }
 }

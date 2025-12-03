@@ -35,7 +35,7 @@ export default function Home({
           <div>
             <input
               type="text"
-              placeholder="Digite o código do evento"
+              placeholder="Digite o ID do evento / seu código de acesso"
               value={eventAccessCode}
               onChange={(e) => updateEventAccessCode(e.target.value.toUpperCase())}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"

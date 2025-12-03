@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
 
 const firebaseConfig = {
@@ -11,23 +12,167 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Inicializa Firebase com tratamento de erro para casos onde as vars não estejam presentes
+// Initialize Firebase services and variables
 let database = null;
+let auth = null;
 let initError = null;
+let authReady = false;
+let authReadyPromise = null;
+
 try {
   const app = initializeApp(firebaseConfig);
   database = getDatabase(app);
+  auth = getAuth(app);
+
+  // Creates a promise that resolves when authentication is ready
+  authReadyPromise = new Promise((resolve, reject) => {
+    // Attempts anonymous authentication
+    signInAnonymously(auth)
+      .then(() => {
+        console.log("Firebase: Autenticado anonimamente");
+        authReady = true;
+        resolve(true);
+      })
+      .catch((error) => {
+        console.error("Firebase: Erro na autenticação anônima:", error);
+
+        // Clear message if anonymous auth is disabled
+        if (error.code === "auth/configuration-not-found") {
+          const helpError = new Error(
+            "Autenticação anônima não está habilitada no Firebase."
+          );
+          helpError.originalError = error;
+          initError = helpError;
+          reject(helpError);
+        } else {
+          initError = error;
+          reject(error);
+        }
+      });
+
+    // Also listen for auth state changes
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Firebase: Usuário autenticado:", user.uid);
+        authReady = true;
+        resolve(true);
+      }
+    });
+  });
 } catch (err) {
   console.error("Firebase initialization error:", err);
   initError = err;
+  authReadyPromise = Promise.reject(err);
 }
 
-// Helper para converter chaves (Firebase não permite ":" em paths)
-const toFirebaseKey = (key) => key.replace(/:/g, "_");
-const fromFirebaseKey = (key) => key.replace(/_/g, ":");
+// Convert storage key to Firebase path
+// Uses hierarchical structure: "eventos/CODIGO" instead of "evento:CODIGO"
+const toFirebasePath = (key) => {
+  // Converts "evento:CODIGO" to "eventos/CODIGO"
+  if (key.startsWith("evento:")) {
+    return "eventos/" + key.substring(7);
+  }
+  return key.replace(/:/g, "/");
+};
 
-// Adapta a API para ser compatível com window.storage
+// Convert Firebase path back to storage key
+const fromFirebasePath = (path) => {
+  // Converts "eventos/CODIGO" to "evento:CODIGO"
+  if (path.startsWith("eventos/")) {
+    return "evento:" + path.substring(8);
+  }
+  return path.replace(/\//g, ":");
+};
+
+// Helper to wait for authentication before operations
+const waitForAuth = async () => {
+  if (authReady) return true;
+  if (authReadyPromise) {
+    try {
+      await authReadyPromise;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
+// Phone index functions for looking up events by phone number
+const normalizePhone = (phone) => {
+  // Remove all non-digit characters and return clean phone number
+  return (phone || "").replace(/\D/g, "");
+};
+
+const setPhoneIndex = async (phone, eventCode) => {
+  if (!database) return;
+  await waitForAuth();
+  
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return;
+  
+  try {
+    const phonePath = `phones/${normalizedPhone}`;
+    const dbRef = ref(database, phonePath);
+    await set(dbRef, { eventCode, updatedAt: Date.now() });
+    console.log(`Phone index created: ${normalizedPhone} -> ${eventCode}`);
+  } catch (error) {
+    console.warn("Error creating phone index:", error);
+    // Non-critical error - don't throw
+  }
+};
+
+const removePhoneIndex = async (phone) => {
+  if (!database) return;
+  await waitForAuth();
+  
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return;
+  
+  try {
+    const phonePath = `phones/${normalizedPhone}`;
+    const dbRef = ref(database, phonePath);
+    await remove(dbRef);
+    console.log(`Phone index removed: ${normalizedPhone}`);
+  } catch (error) {
+    console.warn("Error removing phone index:", error);
+    // Non-critical error - don't throw
+  }
+};
+
+const getEventCodeByPhone = async (phone) => {
+  if (!database) return null;
+  await waitForAuth();
+  
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return null;
+  
+  try {
+    const phonePath = `phones/${normalizedPhone}`;
+    const dbRef = ref(database, phonePath);
+    const snapshot = await get(dbRef);
+    
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      return data.eventCode || null;
+    }
+    return null;
+  } catch (error) {
+    console.warn("Error looking up phone index:", error);
+    return null;
+  }
+};
+
+// Adapts the API to be compatible with window.storage
 const firebaseStorage = {
+  // Exposes the auth promise for those who need to wait
+  waitForAuth,
+  
+  // Phone index functions
+  setPhoneIndex,
+  removePhoneIndex,
+  getEventCodeByPhone,
+
   async get(key) {
     if (initError || !database) {
       const e =
@@ -39,9 +184,12 @@ const firebaseStorage = {
       throw e;
     }
 
+    // Waits for authentication before reading
+    await waitForAuth();
+
     try {
-      const firebaseKey = toFirebaseKey(key);
-      const dbRef = ref(database, firebaseKey);
+      const firebasePath = toFirebasePath(key);
+      const dbRef = ref(database, firebasePath);
       const snapshot = await get(dbRef);
 
       if (snapshot.exists()) {
@@ -70,9 +218,12 @@ const firebaseStorage = {
       throw e;
     }
 
+    // Waits for authentication before saving
+    await waitForAuth();
+
     try {
-      const firebaseKey = toFirebaseKey(key);
-      const dbRef = ref(database, firebaseKey);
+      const firebasePath = toFirebasePath(key);
+      const dbRef = ref(database, firebasePath);
       const dataToSave = typeof value === "string" ? JSON.parse(value) : value;
       await set(dbRef, dataToSave);
       return {
@@ -97,9 +248,12 @@ const firebaseStorage = {
       throw e;
     }
 
+    // Waits for authentication before deleting
+    await waitForAuth();
+
     try {
-      const firebaseKey = toFirebaseKey(key);
-      const dbRef = ref(database, firebaseKey);
+      const firebasePath = toFirebasePath(key);
+      const dbRef = ref(database, firebasePath);
       await remove(dbRef);
       return {
         key: key,
@@ -123,16 +277,32 @@ const firebaseStorage = {
       throw e;
     }
 
+    // Waits for authentication before listing
+    await waitForAuth();
+
     try {
-      const dbRef = ref(database);
+      // With the new security rules, we cannot list the root.
+      let basePath = "";
+      if (prefix.startsWith("evento:")) {
+        basePath = "eventos";
+      }
+
+      const dbRef = ref(database, basePath || undefined);
       const snapshot = await get(dbRef);
 
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const firebasePrefix = toFirebaseKey(prefix);
-        const keys = Object.keys(data)
-          .filter((key) => key.startsWith(firebasePrefix))
-          .map((key) => fromFirebaseKey(key));
+        // If we are listing events, the keys are the codes directly
+        if (basePath === "eventos") {
+          const keys = Object.keys(data).map((code) => `evento:${code}`);
+          return {
+            keys: keys,
+            prefix: prefix,
+            shared: false,
+          };
+        }
+        // Fallback for other prefixes
+        const keys = Object.keys(data).map((key) => fromFirebasePath(key));
         return {
           keys: keys,
           prefix: prefix,
@@ -146,13 +316,13 @@ const firebaseStorage = {
         shared: false,
       };
     } catch (error) {
-      console.error("Erro ao listar do Firebase:", error);
+      console.warn("Erro ao listar do Firebase:", error);
       throw error;
     }
   },
 };
 
-// Adiciona ao window para compatibilidade
+// Adds to window for compatibility
 if (typeof window !== "undefined") {
   firebaseStorage.initError = initError;
   firebaseStorage.isAvailable = !!database;
