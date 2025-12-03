@@ -13,6 +13,7 @@ export default function CriarEvento({
   const [eventName, setEventName] = useState("");
   const [suggestedValue, setSuggestedValue] = useState("");
   const [createdEvent, setCreatedEvent] = useState(null);
+  const [includeChildren, setIncludeChildren] = useState(true);
 
   const createEvent = async () => {
     if (!eventName.trim()) {
@@ -30,6 +31,7 @@ export default function CriarEvento({
     const newEventRecord = {
       nome: eventName,
       valorSugerido: suggestedValue,
+      incluirFilhos: includeChildren,
       codigo: eventUniqueCode,
       codigoAdminHash: adminUniqueCodeHash, // Armazena hash ao invés do código em texto
       codigoAdmin: adminUniqueCode, // Mantém temporariamente para mostrar ao usuário
@@ -101,6 +103,19 @@ export default function CriarEvento({
                   onChange={(e) => setSuggestedValue(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="includeChildren"
+                  type="checkbox"
+                  checked={includeChildren}
+                  onChange={(event) => setIncludeChildren(event.target.checked)}
+                  className="w-4 h-4"
+                />
+                <label htmlFor="includeChildren" className="text-sm text-gray-700">
+                  Incluir filhos (sem celular)
+                </label>
               </div>
 
               <button

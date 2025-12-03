@@ -4,25 +4,32 @@ export const performSecretSantaDraw = async (
   events,
   setEvents
 ) => {
-  // Check if there are at least 2 participants
+  // Respect event option to include children
+  const includeChildren = currentEvent?.incluirFilhos ?? true;
+
+  // Check if there are at least 2 participants (depending on includeChildren)
   let totalParticipants = 0;
   currentEvent.participantes.forEach((p) => {
     totalParticipants++;
-    if (p.filhos && p.filhos.length > 0) {
+    if (includeChildren && p.filhos && p.filhos.length > 0) {
       totalParticipants += p.filhos.length;
     }
   });
 
   if (totalParticipants < 2) {
-    alert("Precisa de pelo menos 2 participantes no total (contando filhos)!");
+    alert(
+      includeChildren
+        ? "Precisa de pelo menos 2 participantes no total (contando filhos)!"
+        : "Precisa de pelo menos 2 participantes no total!"
+    );
     return;
   }
 
-  // Create a list of all participants (including children) with their family identifier
+  // Create a list of all participants (optionally including children) with their family identifier
   const participantsList = [];
   currentEvent.participantes.forEach((p) => {
     participantsList.push({ nome: p.nome, responsavel: p.id });
-    if (p.filhos && p.filhos.length > 0) {
+    if (includeChildren && p.filhos && p.filhos.length > 0) {
       p.filhos.forEach((f) => {
         // filhos may be strings or objects { nome, presentes }
         const childName =

@@ -24,6 +24,7 @@ export default function AdminEvento({
   );
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const isDrawn = !!currentEvent?.sorteado;
+  const includeChildren = currentEvent?.incluirFilhos ?? true;
 
   // Avoid calling setState synchronously in an effect (can trigger cascading renders).
   const currentPage = Math.min(Math.max(1, page), totalPages);
@@ -182,10 +183,39 @@ export default function AdminEvento({
           </div>
 
           <div className="mb-6">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={includeChildren}
+                onChange={async (event) => {
+                  if (isDrawn) return;
+                  const isChecked = !!event.target.checked;
+                  try {
+                    const updatedEvent = { ...currentEvent, incluirFilhos: isChecked };
+                    await window.storage.set(
+                      `evento:${currentEvent.codigo}`,
+                      JSON.stringify(updatedEvent)
+                    );
+                    updateCurrentEvent(updatedEvent);
+                    updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+                  } catch (error) {
+                    console.error('Erro ao atualizar opção incluirFilhos:', error);
+                    alert('Erro ao salvar a configuração. Tente novamente.');
+                  }
+                }}
+              />
+              <span className="text-sm text-gray-700">Incluir filhos (sem celular)</span>
+            </label>
+            {isDrawn && (
+              <p className="text-xs text-gray-500 mt-1">Não é possível alterar após o sorteio.</p>
+            )}
+          </div>
+
+          <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Participantes ({calculateTotalParticipants(participants)}
-              {hasAnyFilhos ? ", incluindo filhos" : ""})
+              Participantes ({includeChildren ? calculateTotalParticipants(participants) : participants.length}
+              {includeChildren && hasAnyFilhos ? ", incluindo filhos" : ""})
             </h3>
 
             {participants.length === 0 ? (

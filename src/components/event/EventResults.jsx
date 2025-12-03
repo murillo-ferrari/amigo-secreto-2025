@@ -49,6 +49,7 @@ export default function secretSantaResults({
     ? getParticipantByName(normalizedFriendName)
     : null;
   const frindGifts = friendObject?.presentes || [];
+  const includeChildren = currentEvent?.incluirFilhos ?? true;
 
   /*   const enviarWhatsApp = (nome, amigo, celular) => {
     const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.nome, eventoAtual.valorSugerido);
@@ -111,7 +112,7 @@ export default function secretSantaResults({
               {/* Optional: share to WhatsApp button can be re-enabled here */}
             </div>
 
-            {currentParticipant.filhos &&
+            {includeChildren && currentParticipant.filhos &&
               currentParticipant.filhos.map((filho) => {
                 const childName =
                   typeof filho === "string"

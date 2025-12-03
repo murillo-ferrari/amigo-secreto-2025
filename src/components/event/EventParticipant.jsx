@@ -35,7 +35,8 @@ export default function EventParticipant({
   const [eventParticipantId, updateEventParticipantId] = useState("");
 
   const eventParticipants = currentEvent?.participantes || [];
-  const hasChildren = eventParticipants.some((p) => p.filhos?.length > 0);
+  const includeChildren = currentEvent?.incluirFilhos ?? true;
+  const hasChildren = includeChildren && eventParticipants.some((p) => p.filhos?.length > 0);
   const isDrawComplete = currentEvent?.sorteado;
 
   // ===== Phone Number Handling =====
@@ -143,7 +144,7 @@ export default function EventParticipant({
       id: createUniqueCode(),
       nome: participantName.trim(),
       celular: participantPhone.trim(),
-      filhos: normalizeChildren(),
+      filhos: includeChildren ? normalizeChildren() : [],
       presentes: [...gifts],
       codigoAcesso: accessCode,
     };
@@ -156,7 +157,7 @@ export default function EventParticipant({
             ...p,
             nome: participantName.trim(),
             celular: participantPhone.trim(),
-            filhos: normalizeChildren(),
+            filhos: includeChildren ? normalizeChildren() : [],
             presentes: [...gifts],
           }
         : p
@@ -297,9 +298,9 @@ export default function EventParticipant({
 
   const renderParticipantListItem = (participant) => {
     const childrenNames =
-      participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) || [];
+      (includeChildren ? (participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) || []) : []);
     const hasGifts = participant.presentes?.length > 0;
-    const hasChildGifts = participant.filhos?.some(
+    const hasChildGifts = includeChildren && participant.filhos?.some(
       (f) => typeof f !== "string" && f.presentes?.length > 0
     );
 
@@ -415,35 +416,37 @@ export default function EventParticipant({
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Filhos (sem celular)
-        </label>
-        <div className="flex gap-2 mb-2">
-          <input
-            type="text"
-            placeholder="Nome do filho"
-            value={childName}
-            onChange={(e) => updateChildName(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addParticipantChild()}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-          />
-          <button
-            onClick={addParticipantChild}
-            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        </div>
-
-        {participantsChildren.length > 0 && (
-          <div className="space-y-2">
-            {participantsChildren.map((child, index) =>
-              renderChildGiftItem(child, index)
-            )}
+      {includeChildren && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Filhos (sem celular)
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Nome do filho"
+              value={childName}
+              onChange={(e) => updateChildName(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && addParticipantChild()}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+            />
+            <button
+              onClick={addParticipantChild}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
           </div>
-        )}
-      </div>
+
+          {participantsChildren.length > 0 && (
+            <div className="space-y-2">
+              {participantsChildren.map((child, index) =>
+                renderChildGiftItem(child, index)
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={registerParticipant}
@@ -465,7 +468,7 @@ export default function EventParticipant({
 
       <div>
         <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
-          Participantes: {calculateTotalParticipants(eventParticipants)}
+          Participantes: {includeChildren ? calculateTotalParticipants(eventParticipants) : eventParticipants.length}
           {hasChildren ? ", incluindo filhos" : ""}
         </p>
         <div className="space-y-1">
