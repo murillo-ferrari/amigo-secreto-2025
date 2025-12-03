@@ -1,8 +1,15 @@
-import Footer from '../layout/Footer';
-import Header from '../layout/Header';
-import RecuperarCodigo from './EventRecoverCode';
+import Footer from "../layout/Footer";
+import Header from "../layout/Header";
+import RecuperarCodigo from "./EventRecoverCode";
 
-export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEvento, recuperarPorCelular, loading }) {
+export default function Home({
+  setView,
+  codigoAcesso,
+  setCodigoAcesso,
+  acessarEvento,
+  recuperarPorCelular,
+  loading,
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
@@ -10,7 +17,7 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
 
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
           <button
-            onClick={() => setView('criar')}
+            onClick={() => setView("criar")}
             className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
           >
             Criar Novo Evento
@@ -37,10 +44,13 @@ export default function Home({ setView, codigoAcesso, setCodigoAcesso, acessarEv
               onClick={() => acessarEvento()}
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
             >
-              {loading ? 'Carregando...' : 'Acessar Evento'}
+              {loading ? "Carregando..." : "Acessar Evento"}
             </button>
 
-            <RecuperarCodigo recuperarPorCelular={recuperarPorCelular} loading={loading} />
+            <RecuperarCodigo
+              recuperarPorCelular={recuperarPorCelular}
+              loading={loading}
+            />
           </div>
         </div>
         <Footer />

@@ -9,7 +9,12 @@ export default function Spinner({ size = 24 }) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <circle cx="12" cy="12" r="10" stroke="#e5e7eb" strokeWidth="4"></circle>
-      <path d="M22 12a10 10 0 00-10-10" stroke="#ef4444" strokeWidth="4" strokeLinecap="round"></path>
+      <path
+        d="M22 12a10 10 0 00-10-10"
+        stroke="#ef4444"
+        strokeWidth="4"
+        strokeLinecap="round"
+      ></path>
     </svg>
   );
 }

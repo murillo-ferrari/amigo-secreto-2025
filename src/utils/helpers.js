@@ -5,39 +5,45 @@ export const createUniqueCode = () => {
 
 // Formats a Brazilian mobile number as (XX) XXXXX-XXXX
 export const formatMobileNumber = (valor) => {
-  const cleanedValue = valor.replace(/\D/g, '');
-  
+  const cleanedValue = valor.replace(/\D/g, "");
+
   if (cleanedValue.length <= 2) {
     return cleanedValue;
   } else if (cleanedValue.length <= 7) {
     return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2)}`;
   } else if (cleanedValue.length <= 11) {
-    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2, 7)}-${cleanedValue.slice(7, 11)}`;
+    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
+      2,
+      7
+    )}-${cleanedValue.slice(7, 11)}`;
   } else {
-    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2, 7)}-${cleanedValue.slice(7, 11)}`;
+    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
+      2,
+      7
+    )}-${cleanedValue.slice(7, 11)}`;
   }
 };
 
 // Validates Brazilian mobile number (must have 10 or 11 digits)
 export const verifyMobileNumber = (celular) => {
-  const formattedNumbers = celular.replace(/\D/g, '');
-  
+  const formattedNumbers = celular.replace(/\D/g, "");
+
   // Must be 10 or 11 digits long.
   if (formattedNumbers.length < 10 || formattedNumbers.length > 11) {
-    return { valido: false, erro: 'Celular deve ter 10 ou 11 dígitos' };
+    return { valido: false, erro: "Celular deve ter 10 ou 11 dígitos" };
   }
-  
+
   // DDD must be valid (11-99)
   const ddd = parseInt(formattedNumbers.slice(0, 2));
   if (ddd < 11 || ddd > 99) {
-    return { valido: false, erro: 'DDD inválido' };
+    return { valido: false, erro: "DDD inválido" };
   }
-  
+
   // If 11 digits, the third digit must be 9
-  if (formattedNumbers.length === 11 && formattedNumbers[2] !== '9') {
-    return { valido: false, erro: 'Número de celular inválido' };
+  if (formattedNumbers.length === 11 && formattedNumbers[2] !== "9") {
+    return { valido: false, erro: "Número de celular inválido" };
   }
-  
+
   return { valido: true, erro: null };
 };
 
@@ -66,9 +72,11 @@ export const calculateTotalParticipants = (participants) => {
 export const hashCode = async (code) => {
   const encoder = new TextEncoder();
   const data = encoder.encode(code.toUpperCase());
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
   return hashHex;
 };
 

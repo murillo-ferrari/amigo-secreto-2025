@@ -1,26 +1,31 @@
-import { useState } from 'react';
-import { createUniqueCode, hashCode } from '../../utils/helpers';
-import Footer from '../layout/Footer';
-import Header from '../layout/Header';
-import QRCodeCard from './QRCode';
+import { useState } from "react";
+import { createUniqueCode, hashCode } from "../../utils/helpers";
+import Footer from "../layout/Footer";
+import Header from "../layout/Header";
+import QRCodeCard from "./QRCode";
 
-export default function CriarEvento({ setView, eventos, setEventos, setEventoAtual }) {
-  const [nomeEvento, setNomeEvento] = useState('');
-  const [valorSugerido, setValorSugerido] = useState('');
+export default function CriarEvento({
+  setView,
+  eventos,
+  setEventos,
+  setEventoAtual,
+}) {
+  const [nomeEvento, setNomeEvento] = useState("");
+  const [valorSugerido, setValorSugerido] = useState("");
   const [createdEvento, setCreatedEvento] = useState(null);
-  
+
   const criarEvento = async () => {
     if (!nomeEvento.trim()) {
-      alert('Digite um nome para o evento!');
+      alert("Digite um nome para o evento!");
       return;
     }
-    
+
     const codigo = createUniqueCode();
     const codigoAdmin = createUniqueCode();
-    
+
     // Hash do código admin para armazenamento seguro
     const codigoAdminHash = await hashCode(codigoAdmin);
-    
+
     const novoEvento = {
       nome: nomeEvento,
       valorSugerido: valorSugerido,
@@ -30,40 +35,45 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
       participantes: [],
       sorteado: false,
       sorteio: {},
-      dataCriacao: new Date().toISOString()
+      dataCriacao: new Date().toISOString(),
     };
-    
+
     // Para salvar no Firebase, removemos o código admin em texto
     const eventoParaSalvar = { ...novoEvento };
     delete eventoParaSalvar.codigoAdmin;
-    
+
     try {
-      await window.storage.set(`evento:${codigo}`, JSON.stringify(eventoParaSalvar));
-      setEventos({...eventos, [codigo]: novoEvento});
+      await window.storage.set(
+        `evento:${codigo}`,
+        JSON.stringify(eventoParaSalvar)
+      );
+      setEventos({ ...eventos, [codigo]: novoEvento });
       setEventoAtual(novoEvento); // Mantém o código em texto para a sessão atual
-      setNomeEvento('');
-      setValorSugerido('');
+      setNomeEvento("");
+      setValorSugerido("");
       // Show QR on create screen first
       setCreatedEvento(novoEvento);
     } catch (error) {
-      alert('Erro ao criar evento. Tente novamente.', error);
+      alert("Erro ao criar evento. Tente novamente.", error);
     }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
         <Header />
         <button
-          onClick={() => setView('home')}
+          onClick={() => setView("home")}
           className="mb-4 text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Criar Evento</h2>
-          
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Criar Evento
+          </h2>
+
           {!createdEvento ? (
             <div className="space-y-4">
               <div>
@@ -78,7 +88,7 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Valor Sugerido (opcional)
@@ -91,7 +101,7 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
-              
+
               <button
                 onClick={criarEvento}
                 className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
@@ -102,11 +112,28 @@ export default function CriarEvento({ setView, eventos, setEventos, setEventoAtu
           ) : (
             <div className="mt-4">
               <h3 className="text-lg font-semibold mb-2">Evento criado</h3>
-              <p className="text-sm text-gray-600 mb-3">Código de participantes: <strong>{createdEvento.codigo}</strong></p>
-              <QRCodeCard url={`${window.location.origin}?code=${createdEvento.codigo}`} label="Compartilhe o evento via QR" />
+              <p className="text-sm text-gray-600 mb-3">
+                Código de participantes: <strong>{createdEvento.codigo}</strong>
+              </p>
+              <QRCodeCard
+                url={`${window.location.origin}?code=${createdEvento.codigo}`}
+                label="Compartilhe o evento via QR"
+              />
               <div className="mt-3 flex gap-2">
-                <button onClick={() => setView('admin')} className="flex-1 bg-green-600 text-white py-2 rounded">Ir para Admin</button>
-                <button onClick={() => { setCreatedEvento(null); }} className="flex-1 bg-gray-100 py-2 rounded">Fechar</button>
+                <button
+                  onClick={() => setView("admin")}
+                  className="flex-1 bg-green-600 text-white py-2 rounded"
+                >
+                  Ir para Admin
+                </button>
+                <button
+                  onClick={() => {
+                    setCreatedEvento(null);
+                  }}
+                  className="flex-1 bg-gray-100 py-2 rounded"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           )}
