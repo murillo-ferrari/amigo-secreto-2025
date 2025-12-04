@@ -3,17 +3,6 @@ import { useState, useEffect } from "react";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
 import { useMessage } from "../message/MessageContext";
 
-/**
- * EventAccessCode - Handles phone-based event access with SMS verification.
- *
- * Flow:
- * 1. User enters phone in Home and clicks "Acessar pelo Celular"
- * 2. SMS code is sent to the phone
- * 3. User enters the SMS code to verify identity
- * 4. After verification, search for events linked to that phone
- * 5. If 1 event: navigate directly
- * 6. If multiple events: show list for user to choose
- */
 export default function EventAccessCode({
   recuperarPorCelular: recoverCodeByPhone,
   recuperarEventoPorCelular,
@@ -65,32 +54,54 @@ export default function EventAccessCode({
         setStep("code");
       } else {
         // Phone Auth not available - skip verification and go directly to search
-        console.warn("Phone Auth not available, proceeding without SMS verification");
+        console.warn(
+          "Phone Auth not available, proceeding without SMS verification"
+        );
         await performSearch();
       }
-    } catch (err) {
-      console.error("SMS send failed:", err);
-      
-      // Check for specific Firebase errors
-      const errorMessage = err?.message || "";
-      const errorCode = err?.code || "";
-      
-      if (errorCode === "auth/invalid-app-credential" || errorMessage.includes("reCAPTCHA")) {
-        setError("Erro de configuração do reCAPTCHA. Verifique se o domínio está autorizado no Firebase Console.");
-      } else if (errorCode === "auth/missing-phone-provider") {
-        setError("Autenticação por telefone não está habilitada. Habilite no Firebase Console.");
-      } else if (errorCode === "auth/quota-exceeded") {
-        setError("Limite de SMS excedido. Tente novamente mais tarde.");
-      } else if (errorCode === "auth/invalid-phone-number") {
-        setError("Número de telefone inválido. Verifique o formato.");
-      } else {
-        // Fallback: proceed to search without verification (for development/testing)
-        setError("Não foi possível enviar SMS. Buscando diretamente...");
-        await performSearch();
+    } catch (error) {
+      console.error("SMS send failed:", error);
+
+      const errorCode = error?.code || "";
+      const errorMsg = error?.message || "";
+
+      // Erros que BLOQUEIAM completamente (sem fallback - proteção contra exploits)
+      const blockedErrors = ["auth/too-many-requests", "auth/quota-exceeded"];
+      if (blockedErrors.includes(errorCode)) {
+        const msg =
+          errorCode === "auth/too-many-requests"
+            ? "Muitas tentativas de acesso. Por segurança, aguarde 15 minutos antes de tentar novamente."
+            : "Limite de SMS excedido. Tente novamente mais tarde.";
+        setError(msg);
+        setStep("blocked");
+        if (onReset) onReset();
+        setInternalLoading(false);
         return;
       }
-      setStep("idle");
-      if (onReset) onReset();
+
+      // Erros de configuração (volta ao idle para tentar novamente)
+      const configErrors = {
+        "auth/invalid-app-credential":
+          "Erro de configuração do reCAPTCHA. Verifique se o domínio está autorizado no Firebase Console.",
+        "auth/missing-phone-provider":
+          "Autenticação por telefone não está habilitada. Habilite no Firebase Console.",
+        "auth/invalid-phone-number":
+          "Número de telefone inválido. Verifique o formato.",
+      };
+
+      if (configErrors[errorCode] || errorMsg.includes("reCAPTCHA")) {
+        setError(
+          configErrors[errorCode] || configErrors["auth/invalid-app-credential"]
+        );
+        setStep("idle");
+        if (onReset) onReset();
+        setInternalLoading(false);
+        return;
+      }
+
+      // Fallback: erro desconhecido - tenta buscar sem SMS (ambiente de dev/teste)
+      setError("Não foi possível enviar SMS. Buscando diretamente...");
+      await performSearch();
     } finally {
       setInternalLoading(false);
     }
@@ -131,9 +142,14 @@ export default function EventAccessCode({
       if (!normalized || normalized.length === 0) {
         setMatches([]);
         setStep("results");
-        setError("Celular não encontrado em nenhum evento. Verifique o número.");
+        setError(
+          "Celular não encontrado em nenhum evento. Verifique o número."
+        );
         if (message?.error) {
-          message.error({ message: "Celular não encontrado. Verifique o número e tente novamente." });
+          message.error({
+            message:
+              "Celular não encontrado. Verifique o número e tente novamente.",
+          });
         }
         return;
       }
@@ -193,7 +209,9 @@ export default function EventAccessCode({
       {step === "sending" && (
         <div className="text-center py-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-          <p className="text-gray-700">Enviando código SMS para {formatMobileNumber(phoneNumber)}...</p>
+          <p className="text-gray-700">
+            Enviando código SMS para {formatMobileNumber(phoneNumber)}...
+          </p>
         </div>
       )}
 
@@ -201,7 +219,8 @@ export default function EventAccessCode({
       {step === "code" && (
         <div className="space-y-3">
           <p className="text-sm text-gray-700 text-center">
-            Digite o código de 6 dígitos enviado para <strong>{formatMobileNumber(phoneNumber)}</strong>
+            Digite o código de 6 dígitos enviado para{" "}
+            <strong>{formatMobileNumber(phoneNumber)}</strong>
           </p>
           <input
             type="text"
@@ -247,7 +266,8 @@ export default function EventAccessCode({
       {step === "results" && matches.length > 1 && (
         <div className="space-y-3">
           <p className="text-sm text-gray-700 text-center font-medium">
-            Encontramos {matches.length} eventos com esse número. <br />Selecione qual deseja acessar:
+            Encontramos {matches.length} eventos com esse número. <br />
+            Selecione qual deseja acessar:
           </p>
           <div className="space-y-2">
             {matches.map((m) => (
@@ -256,8 +276,12 @@ export default function EventAccessCode({
                 className="flex flex-col gap-3 p-3 bg-white rounded-lg border items-center justify-between sm:flex-row"
               >
                 <div className="text-center sm:text-left">
-                  <div className="font-medium text-gray-800">{m.event.nome}</div>
-                  <div className="text-xs text-gray-500">Código: {m.event.codigo}</div>
+                  <div className="font-medium text-gray-800">
+                    {m.event.nome}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Código: {m.event.codigo}
+                  </div>
                 </div>
                 <button
                   onClick={() => handleSelectEvent(m.event.codigo)}
@@ -281,12 +305,47 @@ export default function EventAccessCode({
       {/* Results: No events found */}
       {step === "results" && matches.length === 0 && (
         <div className="text-center py-4 space-y-3">
-          <p className="text-gray-700">{error || "Nenhum evento encontrado para este número."}</p>
+          <p className="text-gray-700">
+            {error || "Nenhum evento encontrado para este número."}
+          </p>
           <button
             onClick={reset}
             className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
           >
             Tentar outro número
+          </button>
+        </div>
+      )}
+
+      {/* Blocked: Rate limit or quota exceeded - NO fallback allowed */}
+      {step === "blocked" && (
+        <div className="text-center py-6 space-y-4">
+          <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-red-600 font-semibold text-lg">
+              Acesso Temporariamente Bloqueado
+            </p>
+            <p className="text-gray-600 mt-2">{error}</p>
+          </div>
+          <button
+            onClick={reset}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+          >
+            Voltar
           </button>
         </div>
       )}
