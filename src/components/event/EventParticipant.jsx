@@ -189,15 +189,26 @@ export default function EventParticipant({
     // Update phone index: remove old mapping (if phone changed) then set new mapping
     try {
       const normalizePhone = (p) => (p || "").replace(/\D/g, "");
-      const oldNorm = oldParticipantPhone ? normalizePhone(oldParticipantPhone) : null;
-      const newNorm = newParticipantPhone ? normalizePhone(newParticipantPhone) : null;
+      const oldNorm = oldParticipantPhone
+        ? normalizePhone(oldParticipantPhone)
+        : null;
+      const newNorm = newParticipantPhone
+        ? normalizePhone(newParticipantPhone)
+        : null;
 
       if (oldNorm && window.storage.removePhoneIndex) {
         try {
           await window.storage.removePhoneIndex(oldNorm, currentEvent.codigo);
-          console.debug(`Removed phone index ${oldNorm} -> ${currentEvent.codigo}`);
+          console.debug(
+            `Removed phone index ${oldNorm} -> ${currentEvent.codigo}`
+          );
         } catch (err) {
-          console.warn("Erro ao remover índice de telefone:", err, oldNorm, currentEvent.codigo);
+          console.warn(
+            "Erro ao remover índice de telefone:",
+            err,
+            oldNorm,
+            currentEvent.codigo
+          );
         }
       }
 
@@ -206,7 +217,12 @@ export default function EventParticipant({
           await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
           console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
         } catch (err) {
-          console.warn("Erro ao criar índice de telefone:", err, newNorm, currentEvent.codigo);
+          console.warn(
+            "Erro ao criar índice de telefone:",
+            err,
+            newNorm,
+            currentEvent.codigo
+          );
         }
       }
     } catch (e) {
@@ -273,6 +289,8 @@ export default function EventParticipant({
       if (isForcedAdmin) {
         // Persist adminParticipantId at event root so ownership is recorded
         updatedEvent.adminParticipantId = newParticipant.id;
+        // Record the event creator as the admin participant id (first participant)
+        updatedEvent.createdBy = newParticipant.id;
       }
     }
 
@@ -302,9 +320,16 @@ export default function EventParticipant({
           if (newNorm && window.storage.setPhoneIndex) {
             try {
               await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
-              console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
+              console.debug(
+                `Set phone index ${newNorm} -> ${currentEvent.codigo}`
+              );
             } catch (err) {
-              console.warn("Erro ao criar índice de telefone (admin flow):", err, newNorm, currentEvent.codigo);
+              console.warn(
+                "Erro ao criar índice de telefone (admin flow):",
+                err,
+                newNorm,
+                currentEvent.codigo
+              );
             }
           }
 

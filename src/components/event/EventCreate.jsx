@@ -40,25 +40,20 @@ export default function CriarEvento({
     // To save in Firebase, remove the admin code in text and add ownership metadata
     const eventToSave = { ...newEventRecord };
 
-    // Attach createdBy / createdAt using authenticated UID when available
+    /* Attach createdAt timestamp. The event's `createdBy` will be set
+    when the first participant (admin) is created. */
     try {
       if (window.storage && window.storage.waitForAuth) {
         await window.storage.waitForAuth();
       }
-      const uid = window.storage && window.storage.getCurrentUserUid ? window.storage.getCurrentUserUid() : null;
-      if (uid) {
-        eventToSave.createdBy = uid;
-        // Also keep createdBy/createdAt in the in-memory record so subsequent edits preserve them
-        newEventRecord.createdBy = uid;
-      }
-      eventToSave.createdAt = Date.now();
-      newEventRecord.createdAt = eventToSave.createdAt;
     } catch (e) {
-      // Best-effort: if auth isn't available, still proceed without createdBy
-      console.warn("Não foi possível obter UID do usuário ao criar evento:", e);
-      eventToSave.createdAt = Date.now();
-      newEventRecord.createdAt = eventToSave.createdAt;
+      console.warn(
+        "Não foi possível aguardar autenticação ao criar evento:",
+        e
+      );
     }
+    eventToSave.createdAt = Date.now();
+    newEventRecord.createdAt = eventToSave.createdAt;
 
     try {
       await window.storage.set(
@@ -70,11 +65,8 @@ export default function CriarEvento({
       setEventName("");
       setSuggestedValue("");
 
-      // Force creation of the first participant (admin) — set pending flag and navigate
-      if (setPendingAdminEvent) {
-        setPendingAdminEvent(eventUniqueCode);
-      }
-      setView("evento");
+      // Keep created event in state so we can show a confirmation UI
+      setCreatedEvent(newEventRecord);
     } catch (error) {
       message.error({ message: "Erro ao criar evento. Tente novamente." });
       console.error("Erro ao criar evento:", error);
@@ -133,7 +125,10 @@ export default function CriarEvento({
                   onChange={(event) => setIncludeChildren(event.target.checked)}
                   className="w-4 h-4"
                 />
-                <label htmlFor="includeChildren" className="text-sm text-gray-700">
+                <label
+                  htmlFor="includeChildren"
+                  className="text-sm text-gray-700"
+                >
                   Incluir filhos (sem celular)
                 </label>
               </div>
@@ -145,7 +140,33 @@ export default function CriarEvento({
                 Criar Evento
               </button>
             </div>
-          ) : null}
+          ) : (
+            <div className="space-y-4 text-center">
+              <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 text-center">
+                <p className="text-green-800 font-semibold mb-2">
+                  Evento criado com sucesso!
+                </p>
+                <p className="text-sm text-gray-700 mb-4">Código do evento:</p>
+                <p className="text-3xl font-bold text-green-800 mb-4">
+                  {createdEvent.codigo}
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={() => {
+                      // Proceed to create the first participant (admin)
+                      if (setPendingAdminEvent)
+                        setPendingAdminEvent(createdEvent.codigo);
+                      setCreatedEvent(null);
+                      setView("evento");
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    Cadastrar Administrador
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

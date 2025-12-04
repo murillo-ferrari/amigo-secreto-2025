@@ -111,7 +111,8 @@ export default function AdminEvento({
     const adminId = currentEvent?.adminParticipantId || null;
     if (adminId && participantId === adminId) {
       message.error({
-        message: "Não é possível excluir o participante administrador do evento.",
+        message:
+          "Não é possível excluir o participante administrador do evento.",
       });
       return;
     }
@@ -148,10 +149,15 @@ export default function AdminEvento({
         const phoneNorm = phone ? normalizePhone(phone) : null;
         if (phoneNorm && window.storage.removePhoneIndex) {
           await window.storage.removePhoneIndex(phoneNorm, currentEvent.codigo);
-          console.debug(`Removed phone index ${phoneNorm} -> ${currentEvent.codigo}`);
+          console.debug(
+            `Removed phone index ${phoneNorm} -> ${currentEvent.codigo}`
+          );
         }
       } catch (err) {
-        console.warn("Erro ao limpar índice de telefone do participante removido:", err);
+        console.warn(
+          "Erro ao limpar índice de telefone do participante removido:",
+          err
+        );
       }
 
       updateCurrentEvent(updatedEvent);
@@ -219,6 +225,40 @@ export default function AdminEvento({
     if (!confirmed) return false;
 
     try {
+      // First, attempt to remove phone index entries for all participants of this event
+      try {
+        const event =
+          currentEvent && currentEvent.codigo === eventId ? currentEvent : null;
+        const participants = event ? event.participantes || [] : [];
+        const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+        for (const p of participants) {
+          try {
+            const phone = p?.celular || null;
+            const phoneNorm = phone ? normalizePhone(phone) : null;
+            if (
+              phoneNorm &&
+              window.storage &&
+              window.storage.removePhoneIndex
+            ) {
+              await window.storage.removePhoneIndex(phoneNorm, eventId);
+              console.debug(`Removed phone index ${phoneNorm} -> ${eventId}`);
+            }
+          } catch (error) {
+            console.warn(
+              "Failed to remove phone index for participant during event delete:",
+              error,
+              p
+            );
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "Error while cleaning phone indices before event delete:",
+          error
+        );
+      }
+
+      // Now delete the event node
       await window.storage.delete(`evento:${eventId}`);
       const updatedEvents = { ...eventList };
       delete updatedEvents[eventId];
@@ -464,10 +504,11 @@ export default function AdminEvento({
                           <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                             {p.codigoAcesso}
                           </span>
-                          {!currentEvent.sorteado && (
+                          {!currentEvent.sorteado &&
                             // Do not allow deleting the admin participant
-                            (currentEvent?.adminParticipantId || p.isAdmin) &&
-                            (currentEvent.adminParticipantId === p.id || p.isAdmin) ? (
+                            ((currentEvent?.adminParticipantId || p.isAdmin) &&
+                            (currentEvent.adminParticipantId === p.id ||
+                              p.isAdmin) ? (
                               <button
                                 disabled
                                 className="text-gray-300 cursor-not-allowed"
@@ -483,8 +524,7 @@ export default function AdminEvento({
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
-                            )
-                          )}
+                            ))}
                         </div>
                       </div>
 
