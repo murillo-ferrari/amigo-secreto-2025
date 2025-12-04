@@ -1,5 +1,6 @@
 import { useState } from "react";
 import CopyButton from "../common/CopyButton";
+import { useMessage } from "../message/MessageContext";
 
 export default function QRCodeCard({
   url,
@@ -8,6 +9,7 @@ export default function QRCodeCard({
   eventName = "",
 }) {
   const [downloading, setDownloading] = useState(false);
+  const message = useMessage();
 
   if (!url) return null;
 
@@ -42,7 +44,9 @@ export default function QRCodeCard({
       URL.revokeObjectURL(href);
     } catch (error) {
       console.error("Erro ao baixar QR:", error);
-      alert("Erro ao baixar QR. Tente novamente.");
+      if (message && message.error) message.error({ message: "Erro ao baixar QR. Tente novamente." });
+      else if (window.appMessage?.error) window.appMessage.error({ message: "Erro ao baixar QR. Tente novamente." });
+      else console.warn("Erro ao baixar QR. Tente novamente.");
     } finally {
       setDownloading(false);
     }

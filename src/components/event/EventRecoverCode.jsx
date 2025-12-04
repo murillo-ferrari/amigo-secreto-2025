@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
+import { useMessage } from "../message/MessageContext";
 
 export default function RecoverCode({ recuperarPorCelular: recoverCodeByPhone, loading }) {
   const [showRecover, setShowRecover] = useState(false);
   const [recoveryPhoneNumber, setRecoverCelular] = useState("");
+  const message = useMessage();
 
   return (
     <div>
@@ -33,13 +35,15 @@ export default function RecoverCode({ recuperarPorCelular: recoverCodeByPhone, l
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const valid = verifyMobileNumber(recoveryPhoneNumber);
-                if (!valid.isValid) {
-                  alert(valid.errorMessage);
-                  return;
-                }
-                recoverCodeByPhone(recoveryPhoneNumber);
-              }}
+                  const valid = verifyMobileNumber(recoveryPhoneNumber);
+                  if (!valid.isValid) {
+                    if (message && message.error) message.error({ message: valid.errorMessage });
+                    else if (window.appMessage?.error) window.appMessage.error({ message: valid.errorMessage });
+                    else console.warn(valid.errorMessage);
+                    return;
+                  }
+                  recoverCodeByPhone(recoveryPhoneNumber);
+                }}
               className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
               disabled={loading}
             >

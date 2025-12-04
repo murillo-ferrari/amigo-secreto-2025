@@ -2,7 +2,8 @@ export const performSecretSantaDraw = async (
   currentEvent,
   setCurrentEvent,
   events,
-  setEvents
+  setEvents,
+  message
 ) => {
   // Respect event option to include children
   const includeChildren = currentEvent?.incluirFilhos ?? true;
@@ -17,11 +18,12 @@ export const performSecretSantaDraw = async (
   });
 
   if (totalParticipants < 2) {
-    alert(
-      includeChildren
-        ? "Precisa de pelo menos 2 participantes no total (contando filhos)!"
-        : "Precisa de pelo menos 2 participantes no total!"
-    );
+    const text = includeChildren
+      ? "Precisa de pelo menos 2 participantes no total (contando filhos)!"
+      : "Precisa de pelo menos 2 participantes no total!";
+    if (message?.error) message.error({ message: text });
+    else if (window.appMessage?.error) window.appMessage.error({ message: text });
+    else console.warn(text);
     return;
   }
 
@@ -46,9 +48,11 @@ export const performSecretSantaDraw = async (
   const uniqueFamilies = new Set(participantsList.map((p) => p.responsavel));
 
   if (uniqueFamilies.size < 2) {
-    alert(
-      "Não é possível realizar o sorteio. Todos os participantes são da mesma família! Adicione participantes de outras famílias."
-    );
+    const text =
+      "Não é possível realizar o sorteio. Todos os participantes são da mesma família! Adicione participantes de outras famílias.";
+    if (message?.error) message.error({ message: text });
+    else if (window.appMessage?.error) window.appMessage.error({ message: text });
+    else console.warn(text);
     return;
   }
 
@@ -115,11 +119,30 @@ export const performSecretSantaDraw = async (
       "person(s) drawing from the same family"
     );
 
-    const userConfirmation = confirm(
+    const msg =
       `Não foi possível encontrar um sorteio onde ninguém tira da própria família.\n\n` +
-        `Encontrei uma solução onde ${lowestViolations} pessoa(s) tirarão alguém da própria família (mas não a si mesmo).\n\n` +
-        `Deseja usar essa solução?`
-    );
+      `Encontrei uma solução onde ${lowestViolations} pessoa(s) tirarão alguém da própria família (mas não a si mesmo).\n\n` +
+      `Deseja usar essa solução?`;
+
+    let userConfirmation = false;
+    if (message?.confirm) {
+      userConfirmation = await message.confirm({
+        title: "Solução parcial encontrada",
+        message: msg,
+        confirmText: "Usar solução",
+        cancelText: "Cancelar",
+      });
+    } else if (window.appMessage?.confirm) {
+      userConfirmation = await window.appMessage.confirm({
+        title: "Solução parcial encontrada",
+        message: msg,
+        confirmText: "Usar solução",
+        cancelText: "Cancelar",
+      });
+    } else {
+      console.warn("Confirm required but no message system available:", msg);
+      userConfirmation = false;
+    }
 
     if (userConfirmation) {
       draw = bestAttempt;
@@ -130,9 +153,11 @@ export const performSecretSantaDraw = async (
   }
 
   if (!isValidDraw) {
-    alert(
-      "Não foi possível realizar o sorteio. Tente adicionar mais participantes de famílias diferentes."
-    );
+    const text =
+      "Não foi possível realizar o sorteio. Tente adicionar mais participantes de famílias diferentes.";
+    if (message?.error) message.error({ message: text });
+    else if (window.appMessage?.error) window.appMessage.error({ message: text });
+    else console.warn(text);
     return;
   }
 
@@ -152,9 +177,13 @@ export const performSecretSantaDraw = async (
     );
     setCurrentEvent(updatedEvent);
     setEvents({ ...events, [currentEvent.codigo]: updatedEvent });
-    alert("Sorteio realizado com sucesso!");
+    if (message?.success) message.success({ message: "Sorteio realizado com sucesso!" });
+    else if (window.appMessage?.success) window.appMessage.success({ message: "Sorteio realizado com sucesso!" });
+    else console.info("Sorteio realizado com sucesso!");
   } catch (error) {
     console.error("Erro ao salvar sorteio:", error);
-    alert("Erro ao realizar sorteio. Tente novamente.");
+    if (message?.error) message.error({ message: "Erro ao realizar sorteio. Tente novamente." });
+    else if (window.appMessage?.error) window.appMessage.error({ message: "Erro ao realizar sorteio. Tente novamente." });
+    else console.error("Erro ao realizar sorteio. Tente novamente.");
   }
 };

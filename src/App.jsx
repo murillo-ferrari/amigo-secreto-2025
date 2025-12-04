@@ -6,6 +6,7 @@ import Home from "./components/event/EventHome";
 import EventParticipant from "./components/event/EventParticipant";
 import SecretSantaResults from "./components/event/EventResults";
 import { validateHash } from "./utils/helpers";
+import { useMessage } from "./components/message/MessageContext";
 
 /**
  * SecretSantaApp is the main component of the Secret Santa web app.
@@ -24,6 +25,7 @@ export default function SecretSantaApp() {
   const [participantMobileNumber, setParticipantMobileNumber] = useState("");
   const [participantChildren, setParticipantChildren] = useState([]);
   const [gifts, setGifts] = useState([]);
+  const message = useMessage();
 
   useEffect(() => {
     const initializeStorage = async () => {
@@ -153,6 +155,12 @@ export default function SecretSantaApp() {
   const fetchEventByCode = async (codeArg) => {
     setLoading(true);
     const formattedCode = (codeArg || accessCode || "").toUpperCase();
+    // Prevent empty code lookup which may trigger forbidden DB access
+    if (!formattedCode || formattedCode.trim() === "") {
+      message.error({ message: "Informe o código do evento antes de acessar." });
+      setLoading(false);
+      return;
+    }
 
     try {
       // First try to fetch directly by event code
@@ -176,7 +184,7 @@ export default function SecretSantaApp() {
       
       if (!searchResult.foundEvent) {
         // Not found in memory - show helpful message
-        alert("Código não encontrado! Se você está usando um código de participante, primeiro acesse usando o código do evento.");
+        message.error({ message: "Código não encontrado! Se você está usando um código de participante, primeiro acesse usando o código do evento." });
         return;
       }
       
@@ -266,14 +274,14 @@ export default function SecretSantaApp() {
       const cleanedMobileNumber = (mobileNumberInput || "").replace(/\D/g, "");
 
       if (!cleanedMobileNumber) {
-        alert("Informe o celular (com DDD)");
+        message.error({ message: "Informe o celular (com DDD)" });
         return;
       }
 
       const result = await findParticipantByPhone(cleanedMobileNumber);
 
       if (!result) {
-        alert("Celular não encontrado. Verifique o número e tente novamente.");
+        message.error({ message: "Celular não encontrado. Verifique o número e tente novamente." });
         return;
       }
 
@@ -294,8 +302,10 @@ export default function SecretSantaApp() {
   };
 
   // Render different views based on current state
+  let content = null;
+
   if (storageError) {
-    return (
+    content = (
       <ErrorScreen
         error={storageError}
         onRetry={() => {
@@ -304,10 +314,8 @@ export default function SecretSantaApp() {
         }}
       />
     );
-  }
-
-  if (view === "home") {
-    return (
+  } else if (view === "home") {
+    content = (
       <Home
         setView={setView}
         codigoAcesso={accessCode}
@@ -317,10 +325,8 @@ export default function SecretSantaApp() {
         loading={loading}
       />
     );
-  }
-
-  if (view === "criar") {
-    return (
+  } else if (view === "criar") {
+    content = (
       <CriarEvento
         setView={setView}
         eventos={eventList}
@@ -328,10 +334,8 @@ export default function SecretSantaApp() {
         setEventoAtual={setCurrentEvent}
       />
     );
-  }
-
-  if (view === "evento") {
-    return (
+  } else if (view === "evento") {
+    content = (
       <EventParticipant
         eventoAtual={currentEvent}
         setEventoAtual={setCurrentEvent}
@@ -349,10 +353,8 @@ export default function SecretSantaApp() {
         loading={loading}
       />
     );
-  }
-
-  if (view === "admin") {
-    return (
+  } else if (view === "admin") {
+    content = (
       <AdminEvento
         eventoAtual={currentEvent}
         setEventoAtual={setCurrentEvent}
@@ -362,10 +364,8 @@ export default function SecretSantaApp() {
         loading={loading}
       />
     );
-  }
-
-  if (view === "resultado") {
-    return (
+  } else if (view === "resultado") {
+    content = (
       <SecretSantaResults
         eventoAtual={currentEvent}
         setView={setView}
@@ -375,5 +375,5 @@ export default function SecretSantaApp() {
     );
   }
 
-  return null;
+  return content;
 }

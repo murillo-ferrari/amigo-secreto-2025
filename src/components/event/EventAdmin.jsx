@@ -6,6 +6,7 @@ import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
+import { useMessage } from "../message/MessageContext";
 
 export default function AdminEvento({
   eventoAtual: currentEvent,
@@ -16,6 +17,7 @@ export default function AdminEvento({
   loading,
 }) {
   const [page, setPage] = useState(1);
+  const message = useMessage();
   const pageSize = 5;
   const participants = currentEvent?.participantes || [];
   const totalParticipants = participants.length;
@@ -34,7 +36,7 @@ export default function AdminEvento({
   const saveEventMeta = async () => {
     const nameTrim = (editName || "").trim();
     if (!nameTrim) {
-      alert("O nome do evento não pode ficar vazio.");
+      message.error({ message: "O nome do evento não pode ficar vazio." });
       return;
     }
 
@@ -63,11 +65,11 @@ export default function AdminEvento({
       };
       updateCurrentEvent(updatedEventForState);
       updateEventList({ ...eventList, [currentEvent.codigo]: updatedEventForState });
-      alert("Dados do evento salvos com sucesso!");
+      message.success({ message: "Dados do evento salvos com sucesso!" });
       setIsEditing(false);
     } catch (error) {
       console.error("Erro ao salvar dados do evento:", error);
-      alert("Erro ao salvar. Tente novamente.");
+      message.error({ message: "Erro ao salvar. Tente novamente." });
     }
   };
 
@@ -88,9 +90,11 @@ export default function AdminEvento({
   };
 
   const removeParticipant = async (participantId) => {
-    if (!confirm("Tem certeza que deseja excluir este participante?")) {
-      return;
-    }
+    const confirmed = await message.confirm({
+      title: "Excluir participante",
+      message: "Tem certeza que deseja excluir este participante?",
+    });
+    if (!confirmed) return;
 
     const updatedEvent = {
       ...currentEvent,
@@ -109,18 +113,18 @@ export default function AdminEvento({
       updateCurrentEvent(updatedEvent);
       updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
     } catch (error) {
-      alert("Erro ao excluir participante. Tente novamente.", error);
+      message.error({ message: "Erro ao excluir participante. Tente novamente." });
+      console.error("Erro ao excluir participante:", error);
     }
   };
 
   const deleteCurrentDraw = async () => {
-    if (
-      !confirm(
-        "Tem certeza que deseja excluir o sorteio atual? Isso permitirá realizar um novo sorteio."
-      )
-    ) {
-      return;
-    }
+    const confirmed = await message.confirm({
+      title: "Excluir sorteio",
+      message:
+        "Tem certeza que deseja excluir o sorteio atual? Isso permitirá realizar um novo sorteio.",
+    });
+    if (!confirmed) return;
 
     const refreshedEvent = {
       ...currentEvent,
@@ -136,46 +140,45 @@ export default function AdminEvento({
       );
       updateCurrentEvent(refreshedEvent);
       updateEventList({ ...eventList, [currentEvent.codigo]: refreshedEvent });
-      alert("Sorteio excluído com sucesso!");
+      message.success({ message: "Sorteio excluído com sucesso!" });
     } catch (error) {
-      alert("Erro ao excluir sorteio. Tente novamente.", error);
+      message.error({ message: "Erro ao excluir sorteio. Tente novamente." });
+      console.error("Erro ao excluir sorteio:", error);
     }
   };
 
   const redoSecretDraw = async () => {
-    if (
-      !confirm(
-        "Tem certeza que deseja refazer o sorteio? O sorteio anterior será descartado."
-      )
-    ) {
-      return;
-    }
+    const confirmed = await message.confirm({
+      title: "Refazer sorteio",
+      message: "Tem certeza que deseja refazer o sorteio? O sorteio anterior será descartado.",
+    });
+    if (!confirmed) return;
 
     await performSecretSantaDraw(
       currentEvent,
       updateCurrentEvent,
       eventList,
-      updateEventList
+      updateEventList,
+      message
     );
   };
 
   const removeEvent = async (eventId) => {
-    if (
-      !confirm(
-        "Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita."
-      )
-    ) {
-      return;
-    }
+    const confirmed = await message.confirm({
+      title: "Excluir evento",
+      message: "Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.",
+    });
+    if (!confirmed) return;
 
     try {
       await window.storage.delete(`evento:${eventId}`);
       const updatedEvents = { ...eventList };
       delete updatedEvents[eventId];
       updateEventList(updatedEvents);
-      alert("Evento excluído com sucesso!");
+      message.success({ message: "Evento excluído com sucesso!" });
     } catch (error) {
-      alert("Erro ao excluir evento. Tente novamente", error);
+      message.error({ message: "Erro ao excluir evento. Tente novamente" });
+      console.error("Erro ao excluir evento:", error);
     }
   };
 
@@ -327,7 +330,7 @@ export default function AdminEvento({
                       "Erro ao atualizar opção incluirFilhos:",
                       error
                     );
-                    alert("Erro ao salvar a configuração. Tente novamente.");
+                    message.error({ message: "Erro ao salvar a configuração. Tente novamente." });
                   }
                 }}
               />
@@ -506,12 +509,13 @@ export default function AdminEvento({
 
           {!isDrawn && participants.length >= 2 && (
             <button
-              onClick={() =>
-                performSecretSantaDraw(
+              onClick={async () =>
+                await performSecretSantaDraw(
                   currentEvent,
                   updateCurrentEvent,
                   eventList,
-                  updateEventList
+                  updateEventList,
+                  message
                 )
               }
               className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"

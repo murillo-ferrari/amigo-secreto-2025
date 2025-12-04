@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createUniqueCode, hashCode } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
+import { useMessage } from "../message/MessageContext";
 import QRCodeCard from "./QRCode";
 
 export default function CriarEvento({
@@ -14,10 +15,11 @@ export default function CriarEvento({
   const [suggestedValue, setSuggestedValue] = useState("");
   const [createdEvent, setCreatedEvent] = useState(null);
   const [includeChildren, setIncludeChildren] = useState(true);
+  const message = useMessage();
 
   const createEvent = async () => {
     if (!eventName.trim()) {
-      alert("Digite um nome para o evento!");
+      message.error({ message: "Digite um nome para o evento!" });
       return;
     }
 
@@ -57,7 +59,8 @@ export default function CriarEvento({
       // Show QR on create screen first
       setCreatedEvent(newEventRecord);
     } catch (error) {
-      alert("Erro ao criar evento. Tente novamente.", error);
+      message.error({ message: "Erro ao criar evento. Tente novamente." });
+      console.error("Erro ao criar evento:", error);
     }
   };
 

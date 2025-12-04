@@ -10,6 +10,7 @@ import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
+import { useMessage } from "../message/MessageContext";
 import QRCodeCard from "./QRCode";
 
 export default function EventParticipant({
@@ -35,6 +36,7 @@ export default function EventParticipant({
   const [eventParticipantId, updateEventParticipantId] = useState("");
 
   const eventParticipants = currentEvent?.participantes || [];
+  const message = useMessage();
   const includeChildren = currentEvent?.incluirFilhos ?? true;
   const hasChildren = includeChildren && eventParticipants.some((p) => p.filhos?.length > 0);
   const isDrawComplete = currentEvent?.sorteado;
@@ -114,13 +116,13 @@ export default function EventParticipant({
   // ===== Participant Registration =====
   const validateParticipantData = () => {
     if (!participantName.trim() || !participantPhone.trim()) {
-      alert("Preencha nome e celular!");
+      message.error({ message: "Preencha nome e celular!" });
       return false;
     }
 
     const validation = verifyMobileNumber(participantPhone);
     if (!validation.isValid) {
-      alert(validation.errorMessage);
+      message.error({ message: validation.errorMessage });
       return false;
     }
 
@@ -224,7 +226,8 @@ export default function EventParticipant({
       await saveEventToStorage(updatedEvent, isNewParticipant ? participantPhone.trim() : null);
       showSuccessMessage(!!existingParticipant, accessCode);
     } catch (error) {
-      alert("Erro ao cadastrar. Tente novamente.", error);
+      message.error({ message: "Erro ao cadastrar. Tente novamente." });
+      console.error("Erro ao cadastrar participante:", error);
     }
   };
 
@@ -235,7 +238,7 @@ export default function EventParticipant({
     );
 
     if (!foundParticipant) {
-      alert("Código inválido!");
+      message.error({ message: "Código inválido!" });
       return;
     }
 
