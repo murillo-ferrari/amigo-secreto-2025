@@ -7,6 +7,7 @@ import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
+import firebaseStorage from "../../firebase";
 
 export default function AdminEvento({
   eventoAtual: currentEvent,
@@ -36,8 +37,8 @@ export default function AdminEvento({
   // Helper: verify current authenticated UID is the event owner/admin creator
   const isAuthorizedAdmin = () => {
     try {
-      if (!window.storage || !window.storage.getCurrentUserUid) return false;
-      const uid = window.storage.getCurrentUserUid();
+      if (!firebaseStorage || !firebaseStorage.getCurrentUserUid) return false;
+      const uid = firebaseStorage.getCurrentUserUid();
       if (!uid) return false;
 
       // Primary ownership: event.createdByUid (set when participant created)
@@ -77,8 +78,8 @@ export default function AdminEvento({
     try {
       // Ensure authentication is ready and present before attempting write
       try {
-        if (window.storage && window.storage.waitForAuth) {
-          await window.storage.waitForAuth();
+        if (firebaseStorage && firebaseStorage.waitForAuth) {
+          await firebaseStorage.waitForAuth();
         }
       } catch (e) {
         console.warn("waitForAuth failed:", e);
@@ -92,7 +93,7 @@ export default function AdminEvento({
         return;
       }
 
-      await window.storage.set(
+      await firebaseStorage.set(
         `evento:${currentEvent.codigo}`,
         JSON.stringify(eventToStore)
       );
@@ -164,7 +165,7 @@ export default function AdminEvento({
     };
 
     try {
-      await window.storage.set(
+      await firebaseStorage.set(
         `evento:${currentEvent.codigo}`,
         JSON.stringify(updatedEvent)
       );
@@ -174,8 +175,8 @@ export default function AdminEvento({
         const normalizePhone = (p) => (p || "").replace(/\D/g, "");
         const phone = participantToRemove?.celular || null;
         const phoneNorm = phone ? normalizePhone(phone) : null;
-        if (phoneNorm && window.storage.removePhoneIndex) {
-          await window.storage.removePhoneIndex(phoneNorm, currentEvent.codigo);
+        if (phoneNorm && firebaseStorage.removePhoneIndex) {
+          await firebaseStorage.removePhoneIndex(phoneNorm, currentEvent.codigo);
           console.debug(
             `Removed phone index ${phoneNorm} -> ${currentEvent.codigo}`
           );
@@ -218,7 +219,7 @@ export default function AdminEvento({
     };
 
     try {
-      await window.storage.set(
+      await firebaseStorage.set(
         `evento:${currentEvent.codigo}`,
         JSON.stringify(refreshedEvent)
       );
@@ -279,10 +280,10 @@ export default function AdminEvento({
             const phoneNorm = phone ? normalizePhone(phone) : null;
             if (
               phoneNorm &&
-              window.storage &&
-              window.storage.removePhoneIndex
+              firebaseStorage &&
+              firebaseStorage.removePhoneIndex
             ) {
-              await window.storage.removePhoneIndex(phoneNorm, eventId);
+              await firebaseStorage.removePhoneIndex(phoneNorm, eventId);
               console.debug(`Removed phone index ${phoneNorm} -> ${eventId}`);
             }
           } catch (error) {
@@ -301,7 +302,7 @@ export default function AdminEvento({
       }
 
       // Now delete the event node
-      await window.storage.delete(`evento:${eventId}`);
+      await firebaseStorage.delete(`evento:${eventId}`);
       const updatedEvents = { ...eventList };
       delete updatedEvents[eventId];
       updateEventList(updatedEvents);
@@ -444,7 +445,7 @@ export default function AdminEvento({
                       ...currentEvent,
                       incluirFilhos: isChecked,
                     };
-                    await window.storage.set(
+                    await firebaseStorage.set(
                       `evento:${currentEvent.codigo}`,
                       JSON.stringify(updatedEvent)
                     );
@@ -549,8 +550,8 @@ export default function AdminEvento({
                           {!currentEvent.sorteado &&
                             // Do not allow deleting the admin participant
                             ((currentEvent?.adminParticipantId || p.isAdmin) &&
-                            (currentEvent.adminParticipantId === p.id ||
-                              p.isAdmin) ? (
+                              (currentEvent.adminParticipantId === p.id ||
+                                p.isAdmin) ? (
                               <button
                                 disabled
                                 className="text-gray-300 cursor-not-allowed"
@@ -584,8 +585,8 @@ export default function AdminEvento({
                                 typeof filho === "string"
                                   ? filho
                                   : filho && filho.nome
-                                  ? filho.nome
-                                  : String(filho);
+                                    ? filho.nome
+                                    : String(filho);
                               return (
                                 <div
                                   key={childName}
@@ -619,11 +620,10 @@ export default function AdminEvento({
                       <button
                         onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded ${
-                          currentPage === 1
-                            ? "bg-gray-200 text-gray-400"
-                            : "bg-white border"
-                        }`}
+                        className={`px-3 py-1 rounded ${currentPage === 1
+                          ? "bg-gray-200 text-gray-400"
+                          : "bg-white border"
+                          }`}
                       >
                         Anterior
                       </button>
@@ -635,11 +635,10 @@ export default function AdminEvento({
                           setPage((prev) => Math.min(totalPages, prev + 1))
                         }
                         disabled={currentPage === totalPages}
-                        className={`px-3 py-1 rounded ${
-                          currentPage === totalPages
-                            ? "bg-gray-200 text-gray-400"
-                            : "bg-white border"
-                        }`}
+                        className={`px-3 py-1 rounded ${currentPage === totalPages
+                          ? "bg-gray-200 text-gray-400"
+                          : "bg-white border"
+                          }`}
                       >
                         Próximo
                       </button>

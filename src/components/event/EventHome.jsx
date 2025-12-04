@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatMobileNumber } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import EventAccessCode from "./EventAccessCode";
+import { useFirebase } from "../../context/FirebaseContext";
 
 export default function Home({
   setView,
@@ -14,6 +15,16 @@ export default function Home({
   verified,
 }) {
   const [triggerAccess, setTriggerAccess] = useState(false);
+  const firebase = useFirebase();
+
+  useEffect(() => {
+    return () => {
+      // Clear reCAPTCHA when leaving the home screen to prevent "element removed" errors
+      if (firebase?.clearRecaptcha) {
+        firebase.clearRecaptcha();
+      }
+    };
+  }, []);
 
   const handleAccessClick = () => {
     const digits = (eventAccessCode || "").replace(/\D/g, "");
@@ -34,13 +45,13 @@ export default function Home({
       <div className="max-w-md mx-auto pt-12">
         {/* reCAPTCHA container - Firebase requires this element to exist in DOM */}
         {/* Using visibility:hidden keeps it in layout but invisible */}
-        <div 
-          id="recaptcha-container" 
-          style={{ 
+        <div
+          id="recaptcha-container"
+          style={{
             visibility: "hidden",
             height: 0,
             overflow: "hidden"
-          }} 
+          }}
         />
         <Header verified={verified} />
 

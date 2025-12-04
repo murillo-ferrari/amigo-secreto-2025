@@ -1,3 +1,5 @@
+import firebaseStorage from "../firebase";
+
 export const performSecretSantaDraw = async (
   currentEvent,
   setCurrentEvent,
@@ -171,7 +173,7 @@ export const performSecretSantaDraw = async (
   };
 
   try {
-    await window.storage.set(
+    await firebaseStorage.set(
       `evento:${currentEvent.codigo}`,
       JSON.stringify(updatedEvent)
     );

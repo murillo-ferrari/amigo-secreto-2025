@@ -3,6 +3,7 @@ import { createUniqueCode } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
+import firebaseStorage from "../../firebase";
 
 export default function CriarEvento({
   setView,
@@ -43,8 +44,8 @@ export default function CriarEvento({
     /* Attach createdAt timestamp. The event's `createdBy` will be set
     when the first participant (admin) is created. */
     try {
-      if (window.storage && window.storage.waitForAuth) {
-        await window.storage.waitForAuth();
+      if (firebaseStorage?.waitForAuth) {
+        await firebaseStorage.waitForAuth();
       }
     } catch (e) {
       console.warn(
@@ -56,7 +57,7 @@ export default function CriarEvento({
     newEventRecord.createdAt = eventToSave.createdAt;
 
     try {
-      await window.storage.set(
+      await firebaseStorage.set(
         `evento:${eventUniqueCode}`,
         JSON.stringify(eventToSave)
       );

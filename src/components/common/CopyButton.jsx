@@ -21,9 +21,8 @@ export default function CopyButton({
   return (
     <button
       onClick={handleCopy}
-      className={`px-2 py-2 rounded bg-gray-200 hover:bg-gray-300 ${
-        className || ""
-      }`}
+      className={`px-2 py-2 rounded bg-gray-200 hover:bg-gray-300 ${className || ""
+        }`}
       title={copied ? copiedLabel : label}
     >
       {copied ? copiedLabel : label}

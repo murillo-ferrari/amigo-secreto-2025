@@ -139,7 +139,7 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
     console.warn("createRecaptcha: window is undefined (SSR?)");
     return null;
   }
-  
+
   if (!auth) {
     console.warn("createRecaptcha: Firebase Auth not initialized");
     return null;
@@ -148,32 +148,57 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
   // IMPORTANT: Wait for auth to be ready before creating RecaptchaVerifier
   // This ensures the auth object is fully initialized
   await waitForAuth();
-  
+
   // Check if container exists in DOM
-  const container = document.getElementById(containerId);
+  let container = document.getElementById(containerId);
   if (!container) {
     console.warn(`createRecaptcha: container #${containerId} not found in DOM`);
     return null;
   }
 
   try {
-    // Clear any existing verifier to avoid conflicts
+    // AGGRESSIVE CLEANUP: Reset grecaptcha widget directly if it exists
+    if (recaptchaWidgetId !== null && typeof grecaptcha !== "undefined") {
+      try {
+        grecaptcha.reset(recaptchaWidgetId);
+        console.log("Reset grecaptcha widget:", recaptchaWidgetId);
+      } catch (e) {
+        console.warn("Error resetting grecaptcha widget:", e);
+      }
+    }
+
+    // Clear any existing Firebase verifier
     if (recaptchaVerifier) {
       try {
         recaptchaVerifier.clear();
+        console.log("Cleared Firebase recaptchaVerifier");
       } catch (e) {
         console.warn("Error clearing previous reCAPTCHA:", e);
       }
       recaptchaVerifier = null;
-      recaptchaWidgetId = null;
+    }
+    recaptchaWidgetId = null;
+
+    // NUCLEAR OPTION: Completely replace the container element to ensure a fresh state
+    // This is necessary because grecaptcha maintains internal state tied to DOM elements
+    const parent = container.parentNode;
+    if (parent) {
+      const newContainer = document.createElement("div");
+      newContainer.id = containerId;
+      newContainer.style.visibility = "hidden";
+      newContainer.style.height = "0";
+      newContainer.style.overflow = "hidden";
+      parent.replaceChild(newContainer, container);
+      container = newContainer;
+      console.log("Replaced container element for fresh reCAPTCHA");
+    } else {
+      // Fallback: just clear innerHTML
+      container.innerHTML = "";
     }
 
-    // Clear container content to avoid duplicate widgets
-    container.innerHTML = "";
-
-    console.log("Creating RecaptchaVerifier with:", { 
-      containerId, 
-      size, 
+    console.log("Creating RecaptchaVerifier with:", {
+      containerId,
+      size,
       authExists: !!auth,
       authCurrentUser: auth?.currentUser?.uid || "none"
     });
@@ -195,7 +220,7 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
     // Pre-render the reCAPTCHA
     recaptchaWidgetId = await recaptchaVerifier.render();
     console.log("reCAPTCHA rendered successfully, widget ID:", recaptchaWidgetId);
-    
+
     return recaptchaVerifier;
   } catch (error) {
     console.error("createRecaptcha error:", error);
@@ -256,10 +281,19 @@ const sendPhoneVerification = async (phone) => {
 
   console.log("Sending verification to:", phoneE164);
 
-  // Create reCAPTCHA verifier if not exists
-  if (!recaptchaVerifier) {
-    await createRecaptcha();
+  // ALWAYS clear and recreate reCAPTCHA to avoid stale widget references
+  // This is necessary because React may have unmounted/remounted the container
+  if (recaptchaVerifier) {
+    try {
+      recaptchaVerifier.clear();
+    } catch (e) {
+      console.warn("Error clearing previous reCAPTCHA:", e);
+    }
+    recaptchaVerifier = null;
+    recaptchaWidgetId = null;
   }
+
+  await createRecaptcha();
 
   if (!recaptchaVerifier) {
     throw new Error("Failed to create reCAPTCHA verifier. Make sure the page has a container with id 'recaptcha-container'.");
@@ -268,7 +302,7 @@ const sendPhoneVerification = async (phone) => {
   try {
     // Store phone for later use
     lastPhoneNumber = digits;
-    
+
     // Call signInWithPhoneNumber
     lastConfirmationResult = await signInWithPhoneNumber(auth, phoneE164, recaptchaVerifier);
     console.log("Verification code sent successfully");
@@ -277,10 +311,10 @@ const sendPhoneVerification = async (phone) => {
     console.error("sendPhoneVerification error:", error);
     lastPhoneNumber = null;
     lastConfirmationResult = null;
-    
+
     // Reset reCAPTCHA on error as per Firebase documentation
     resetRecaptcha();
-    
+
     throw error;
   }
 };
@@ -456,6 +490,17 @@ const firebaseStorage = {
 
   // Phone Auth helpers
   createRecaptcha,
+  clearRecaptcha: () => {
+    if (recaptchaVerifier) {
+      try {
+        recaptchaVerifier.clear();
+      } catch (e) {
+        console.warn("Error clearing reCAPTCHA:", e);
+      }
+      recaptchaVerifier = null;
+      recaptchaWidgetId = null;
+    }
+  },
   sendPhoneVerification,
   confirmPhoneCode,
   isPhoneAuthAvailable,
@@ -640,11 +685,12 @@ const firebaseStorage = {
   },
 };
 
-// Adds to window for compatibility
+// Set metadata properties on firebaseStorage object
 if (typeof window !== "undefined") {
   firebaseStorage.initError = initError;
   firebaseStorage.isAvailable = !!database;
-  window.storage = firebaseStorage;
+  // NOTE: window.storage is no longer assigned here.
+  // Components should import firebaseStorage directly or use useFirebase() hook.
 }
 
 export default firebaseStorage;

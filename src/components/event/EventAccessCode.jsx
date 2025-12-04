@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { useState, useEffect } from "react";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
 import { useMessage } from "../message/MessageContext";
+import { useFirebase } from "../../context/FirebaseContext";
 
 export default function EventAccessCode({
   recuperarPorCelular: recoverCodeByPhone,
@@ -17,11 +18,17 @@ export default function EventAccessCode({
   const [error, setError] = useState("");
   const [internalLoading, setInternalLoading] = useState(false);
   const message = useMessage();
+  const firebase = useFirebase();
 
   // When parent triggers access, start the SMS flow
   useEffect(() => {
     if (triggerAccess && phoneNumber) {
       handleStartSmsVerification();
+    }
+    return () => {
+      if (firebase?.clearRecaptcha) {
+        firebase.clearRecaptcha();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerAccess, phoneNumber]);
@@ -32,6 +39,9 @@ export default function EventAccessCode({
     setMatches([]);
     setError("");
     setInternalLoading(false);
+    if (firebase?.clearRecaptcha) {
+      firebase.clearRecaptcha();
+    }
     if (onReset) onReset();
   };
 
@@ -49,8 +59,8 @@ export default function EventAccessCode({
     setInternalLoading(true);
 
     try {
-      if (window.storage?.sendPhoneVerification) {
-        await window.storage.sendPhoneVerification(phoneNumber);
+      if (firebase?.sendPhoneVerification) {
+        await firebase.sendPhoneVerification(phoneNumber);
         setStep("code");
       } else {
         // Phone Auth not available - skip verification and go directly to search
@@ -117,8 +127,8 @@ export default function EventAccessCode({
     setInternalLoading(true);
 
     try {
-      if (window.storage?.confirmPhoneCode) {
-        await window.storage.confirmPhoneCode(smsCode);
+      if (firebase?.confirmPhoneCode) {
+        await firebase.confirmPhoneCode(smsCode);
       }
       // After confirmation, search for events
       await performSearch();

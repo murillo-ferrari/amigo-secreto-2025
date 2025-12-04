@@ -13,6 +13,7 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import QRCodeCard from "./QRCode";
+import firebaseStorage from "../../firebase";
 
 export default function EventParticipant({
   eventoAtual: currentEvent,
@@ -162,8 +163,8 @@ export default function EventParticipant({
     };
 
     try {
-      if (window.storage && window.storage.getCurrentUserUid) {
-        const uid = window.storage.getCurrentUserUid();
+      if (firebaseStorage && firebaseStorage.getCurrentUserUid) {
+        const uid = firebaseStorage.getCurrentUserUid();
         if (uid) base.createdByUid = uid;
       }
     } catch (err) {
@@ -177,12 +178,12 @@ export default function EventParticipant({
     return eventParticipants.map((p) =>
       p.id === existingParticipant.id
         ? {
-            ...p,
-            nome: participantName.trim(),
-            celular: participantPhone.trim(),
-            filhos: includeChildren ? normalizeChildren() : [],
-            presentes: [...gifts],
-          }
+          ...p,
+          nome: participantName.trim(),
+          celular: participantPhone.trim(),
+          filhos: includeChildren ? normalizeChildren() : [],
+          presentes: [...gifts],
+        }
         : p
     );
   };
@@ -194,8 +195,8 @@ export default function EventParticipant({
   ) => {
     // Write only the participantes subtree to respect DB rules that prevent
     // arbitrary writes to the whole event root from the client.
-    if (window.storage && window.storage.set) {
-      await window.storage.set(
+    if (firebaseStorage && firebaseStorage.set) {
+      await firebaseStorage.set(
         `evento:${currentEvent.codigo}/participantes`,
         JSON.stringify(updatedEvent.participantes || [])
       );
@@ -211,9 +212,9 @@ export default function EventParticipant({
         ? normalizePhone(newParticipantPhone)
         : null;
 
-      if (oldNorm && window.storage.removePhoneIndex) {
+      if (oldNorm && firebaseStorage.removePhoneIndex) {
         try {
-          await window.storage.removePhoneIndex(oldNorm, currentEvent.codigo);
+          await firebaseStorage.removePhoneIndex(oldNorm, currentEvent.codigo);
           console.debug(
             `Removed phone index ${oldNorm} -> ${currentEvent.codigo}`
           );
@@ -227,9 +228,9 @@ export default function EventParticipant({
         }
       }
 
-      if (newNorm && window.storage.setPhoneIndex) {
+      if (newNorm && firebaseStorage.setPhoneIndex) {
         try {
-          await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
+          await firebaseStorage.setPhoneIndex(newNorm, currentEvent.codigo);
           console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
         } catch (err) {
           console.warn(
@@ -324,8 +325,8 @@ export default function EventParticipant({
           pendingAdminEvent === currentEvent.codigo;
         if (isForcedAdmin) {
           // Full save of event (includes participantes + adminParticipantId)
-          if (window.storage && window.storage.set) {
-            await window.storage.set(
+          if (firebaseStorage && firebaseStorage.set) {
+            await firebaseStorage.set(
               `evento:${currentEvent.codigo}`,
               JSON.stringify(updatedEvent)
             );
@@ -334,9 +335,9 @@ export default function EventParticipant({
           // Also update phone index for the new participant
           const normalizePhone = (p) => (p || "").replace(/\D/g, "");
           const newNorm = newPhone ? normalizePhone(newPhone) : null;
-          if (newNorm && window.storage.setPhoneIndex) {
+          if (newNorm && firebaseStorage.setPhoneIndex) {
             try {
-              await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
+              await firebaseStorage.setPhoneIndex(newNorm, currentEvent.codigo);
               console.debug(
                 `Set phone index ${newNorm} -> ${currentEvent.codigo}`
               );
@@ -465,7 +466,7 @@ export default function EventParticipant({
   const renderParticipantListItem = (participant) => {
     const childrenNames = includeChildren
       ? participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) ||
-        []
+      []
       : [];
     const hasGifts = participant.presentes?.length > 0;
     const hasChildGifts =

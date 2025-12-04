@@ -1,12 +1,13 @@
 import { Gift, CheckCircle } from "lucide-react";
+import firebaseStorage from "../../firebase";
 
 export default function Header({ verified = null }) {
   let isVerified = false;
   if (typeof verified === "boolean") isVerified = verified;
   else {
     try {
-      if (window.storage && window.storage.getCurrentUserUid) {
-        isVerified = !!window.storage.getCurrentUserUid();
+      if (firebaseStorage?.getCurrentUserUid) {
+        isVerified = !!firebaseStorage.getCurrentUserUid();
       }
     } catch (err) {
       isVerified = false;
