@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
 
 const firebaseConfig = {
@@ -29,7 +29,7 @@ try {
     // Attempts anonymous authentication
     signInAnonymously(auth)
       .then(() => {
-        console.log("Firebase: Autenticado anonimamente");
+        // console.log("Firebase: Autenticado anonimamente");
         authReady = true;
         resolve(true);
       })
@@ -53,7 +53,7 @@ try {
     // Also listen for auth state changes
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log("Firebase: Usuário autenticado:", user.uid);
+        // console.log("Firebase: Usuário autenticado:", user.uid);
         authReady = true;
         resolve(true);
       }
@@ -107,33 +107,50 @@ const normalizePhone = (phone) => {
 const setPhoneIndex = async (phone, eventCode) => {
   if (!database) return;
   await waitForAuth();
-  
+
   const normalizedPhone = normalizePhone(phone);
-  if (!normalizedPhone) return;
-  
+  if (!normalizedPhone || !eventCode) return;
+
   try {
-    const phonePath = `phones/${normalizedPhone}`;
+    // Debug: log auth state and path to help diagnose permission errors
+    try {
+      console.debug(
+        "setPhoneIndex: auth:",
+        auth?.currentUser ? { uid: auth.currentUser.uid } : null,
+        {
+          normalizedPhone,
+          eventCode,
+        }
+      );
+    } catch (error) {
+      console.warn("Error logging setPhoneIndex debug info:", error);
+    }
+
+    // Store under phones/{phone}/{eventCode} so a single phone can map to multiple events
+    const phonePath = `phones/${normalizedPhone}/${eventCode}`;
     const dbRef = ref(database, phonePath);
-    await set(dbRef, { eventCode, updatedAt: Date.now() });
-    console.log(`Phone index created: ${normalizedPhone} -> ${eventCode}`);
+    await set(dbRef, { updatedAt: Date.now() });
+    // console.log(`Phone index entry created: ${normalizedPhone} -> ${eventCode}`);
   } catch (error) {
     console.warn("Error creating phone index:", error);
     // Non-critical error - don't throw
   }
 };
 
-const removePhoneIndex = async (phone) => {
+const removePhoneIndex = async (phone, eventCode = null) => {
   if (!database) return;
   await waitForAuth();
-  
+
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return;
-  
+
   try {
-    const phonePath = `phones/${normalizedPhone}`;
+    const phonePath = eventCode
+      ? `phones/${normalizedPhone}/${eventCode}`
+      : `phones/${normalizedPhone}`;
     const dbRef = ref(database, phonePath);
     await remove(dbRef);
-    console.log(`Phone index removed: ${normalizedPhone}`);
+    // console.log(`Phone index removed: ${normalizedPhone}${eventCode ? ' -> ' + eventCode : ''}`);
   } catch (error) {
     console.warn("Error removing phone index:", error);
     // Non-critical error - don't throw
@@ -141,20 +158,29 @@ const removePhoneIndex = async (phone) => {
 };
 
 const getEventCodeByPhone = async (phone) => {
+  // Backwards-compatible single-event lookup. Prefer getEventCodesByPhone where possible.
   if (!database) return null;
   await waitForAuth();
-  
+
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return null;
-  
+
   try {
     const phonePath = `phones/${normalizedPhone}`;
     const dbRef = ref(database, phonePath);
     const snapshot = await get(dbRef);
-    
+
     if (snapshot.exists()) {
       const data = snapshot.val();
-      return data.eventCode || null;
+      // Old format: { eventCode, updatedAt }
+      if (data && typeof data === "object" && data.eventCode) {
+        return data.eventCode || null;
+      }
+      // New format: { EVENTCODE1: { updatedAt }, EVENTCODE2: { updatedAt }, ... }
+      if (data && typeof data === "object") {
+        const keys = Object.keys(data);
+        return keys.length > 0 ? keys[0] : null;
+      }
     }
     return null;
   } catch (error) {
@@ -163,15 +189,53 @@ const getEventCodeByPhone = async (phone) => {
   }
 };
 
+const getEventCodesByPhone = async (phone) => {
+  // Return all event codes associated with a phone (new multi-mapping format).
+  if (!database) return [];
+  await waitForAuth();
+
+  const normalizedPhone = normalizePhone(phone);
+  if (!normalizedPhone) return [];
+
+  try {
+    const phonePath = `phones/${normalizedPhone}`;
+    const dbRef = ref(database, phonePath);
+    const snapshot = await get(dbRef);
+
+    if (!snapshot.exists()) return [];
+    const data = snapshot.val();
+
+    // Old single mapping
+    if (data && typeof data === "object" && data.eventCode) {
+      return [data.eventCode];
+    }
+
+    // New mapping: keys are event codes
+    if (data && typeof data === "object") {
+      return Object.keys(data);
+    }
+
+    return [];
+  } catch (error) {
+    console.warn("Error looking up phone index:", error);
+    return [];
+  }
+};
+
 // Adapts the API to be compatible with window.storage
 const firebaseStorage = {
   // Exposes the auth promise for those who need to wait
   waitForAuth,
-  
+
   // Phone index functions
   setPhoneIndex,
   removePhoneIndex,
   getEventCodeByPhone,
+  getEventCodesByPhone,
+
+  // Return current authenticated user's UID (or null)
+  getCurrentUserUid: () =>
+    auth && auth.currentUser ? auth.currentUser.uid : null,
 
   async get(key) {
     if (initError || !database) {
@@ -225,6 +289,22 @@ const firebaseStorage = {
       const firebasePath = toFirebasePath(key);
       const dbRef = ref(database, firebasePath);
       const dataToSave = typeof value === "string" ? JSON.parse(value) : value;
+      try {
+        console.debug(
+          "firebase.set: auth:",
+          auth?.currentUser ? { uid: auth.currentUser.uid } : null,
+          {
+            path: firebasePath,
+            dataType: Array.isArray(dataToSave) ? "array" : typeof dataToSave,
+            dataKeys:
+              dataToSave && typeof dataToSave === "object"
+                ? Object.keys(dataToSave).slice(0, 5)
+                : null,
+          }
+        );
+      } catch (error) {
+        console.warn("Error logging setPhoneIndex debug info:", error);
+      }
       await set(dbRef, dataToSave);
       return {
         key: key,
@@ -254,6 +334,15 @@ const firebaseStorage = {
     try {
       const firebasePath = toFirebasePath(key);
       const dbRef = ref(database, firebasePath);
+      try {
+        console.debug(
+          "firebase.remove: auth:",
+          auth?.currentUser ? { uid: auth.currentUser.uid } : null,
+          { path: firebasePath }
+        );
+      } catch (error) {
+        console.warn("Error logging remove debug info:", error);
+      }
       await remove(dbRef);
       return {
         key: key,

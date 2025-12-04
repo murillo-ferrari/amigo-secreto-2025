@@ -26,9 +26,27 @@ export default function RecoverCode({
 
     const result = await recoverCodeByPhone(recoveryPhoneNumber);
 
-    // Expecting an array of matches from the caller (App.jsx). If caller performed navigation
-    // for single match, it will still return the single-item array.
-    if (!result || result.length === 0) {
+    // Normalize different shapes returned by callers. We expect either:
+    // - An array of { event, participant }
+    // - An array of event objects
+    // - A single { event, participant } or single event object
+    const normalize = (res) => {
+      if (!res) return [];
+      const arr = Array.isArray(res) ? res : [res];
+      return arr
+        .map((item) => {
+          if (!item) return null;
+          if (item.event) return item;
+          // If the item looks like an event object (has codigo), wrap it
+          if (item.codigo || item.code) return { event: item, participant: null };
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    const normalized = normalize(result);
+
+    if (!normalized || normalized.length === 0) {
       setMatches([]);
       if (message && message.error)
         message.error({
@@ -38,14 +56,20 @@ export default function RecoverCode({
       return;
     }
 
-    if (result.length === 1) {
-      // App already handled the navigation/display for a single match
-      setMatches(result);
+    // If only one match, delegate to the App handler (if provided) so it can
+    // drive navigation and participant recovery. Otherwise just display choices.
+    if (normalized.length === 1) {
+      setMatches(normalized);
+      // If the parent component provided an explicit per-event recovery handler,
+      // call it so the App can navigate to the correct participant view.
+      if (recuperarEventoPorCelular) {
+        const eventCode = normalized[0].event?.codigo;
+        if (eventCode) await recuperarEventoPorCelular(eventCode, recoveryPhoneNumber);
+      }
       return;
     }
 
-    // Multiple matches — show choices
-    setMatches(result);
+    setMatches(normalized);
   };
 
   const handleSelectEvent = async (eventCode) => {

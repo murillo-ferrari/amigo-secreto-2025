@@ -27,6 +27,9 @@ export default function EventParticipant({
   setFilhos: updateParticipantsChildren,
   presentes: gifts,
   setPresentes: updateGifts,
+  pendingAdminEvent,
+  setPendingAdminEvent,
+  accessedViaParticipantCode,
 }) {
   const [newGift, updateNewGift] = useState("");
   const [childrenNewGift, updateChildrenGift] = useState({});
@@ -38,7 +41,8 @@ export default function EventParticipant({
   const eventParticipants = currentEvent?.participantes || [];
   const message = useMessage();
   const includeChildren = currentEvent?.incluirFilhos ?? true;
-  const hasChildren = includeChildren && eventParticipants.some((p) => p.filhos?.length > 0);
+  const hasChildren =
+    includeChildren && eventParticipants.some((p) => p.filhos?.length > 0);
   const isDrawComplete = currentEvent?.sorteado;
 
   // ===== Phone Number Handling =====
@@ -57,7 +61,7 @@ export default function EventParticipant({
 
   const addParticipantChild = () => {
     if (!childName.trim()) return;
-    
+
     updateParticipantsChildren([
       ...participantsChildren,
       { nome: childName.trim(), presentes: [] },
@@ -66,7 +70,9 @@ export default function EventParticipant({
   };
 
   const removeParticipantChild = (index) => {
-    updateParticipantsChildren(participantsChildren.filter((_, i) => i !== index));
+    updateParticipantsChildren(
+      participantsChildren.filter((_, i) => i !== index)
+    );
   };
 
   const addChildGift = (childIndex) => {
@@ -75,7 +81,7 @@ export default function EventParticipant({
 
     const updatedChildren = participantsChildren.map((child, i) => {
       if (i !== childIndex) return child;
-      
+
       const normalized = normalizeChild(child);
       return {
         ...normalized,
@@ -104,7 +110,7 @@ export default function EventParticipant({
   // ===== Gift Management =====
   const addGift = () => {
     if (!newGift.trim()) return;
-    
+
     updateGifts([...gifts, newGift.trim()]);
     updateNewGift("");
   };
@@ -166,7 +172,11 @@ export default function EventParticipant({
     );
   };
 
-  const saveEventToStorage = async (updatedEvent, newParticipantPhone = null, oldParticipantPhone = null) => {
+  const saveEventToStorage = async (
+    updatedEvent,
+    newParticipantPhone = null,
+    oldParticipantPhone = null
+  ) => {
     // Write only the participantes subtree to respect DB rules that prevent
     // arbitrary writes to the whole event root from the client.
     if (window.storage && window.storage.set) {
@@ -178,12 +188,26 @@ export default function EventParticipant({
 
     // Update phone index: remove old mapping (if phone changed) then set new mapping
     try {
-      if (oldParticipantPhone && window.storage.removePhoneIndex) {
-        await window.storage.removePhoneIndex(oldParticipantPhone, currentEvent.codigo);
+      const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+      const oldNorm = oldParticipantPhone ? normalizePhone(oldParticipantPhone) : null;
+      const newNorm = newParticipantPhone ? normalizePhone(newParticipantPhone) : null;
+
+      if (oldNorm && window.storage.removePhoneIndex) {
+        try {
+          await window.storage.removePhoneIndex(oldNorm, currentEvent.codigo);
+          console.debug(`Removed phone index ${oldNorm} -> ${currentEvent.codigo}`);
+        } catch (err) {
+          console.warn("Erro ao remover índice de telefone:", err, oldNorm, currentEvent.codigo);
+        }
       }
 
-      if (newParticipantPhone && window.storage.setPhoneIndex) {
-        await window.storage.setPhoneIndex(newParticipantPhone, currentEvent.codigo);
+      if (newNorm && window.storage.setPhoneIndex) {
+        try {
+          await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
+          console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
+        } catch (err) {
+          console.warn("Erro ao criar índice de telefone:", err, newNorm, currentEvent.codigo);
+        }
       }
     } catch (e) {
       // Phone index update is best-effort; do not block primary flow
@@ -205,7 +229,9 @@ export default function EventParticipant({
   const showSuccessMessage = (isUpdate, accessCode) => {
     updateParticipantCode(accessCode);
     setSuccessMessage(
-      isUpdate ? "Cadastro atualizado com sucesso!" : "✓ Cadastrado com sucesso!"
+      isUpdate
+        ? "Cadastro atualizado com sucesso!"
+        : "✓ Cadastrado com sucesso!"
     );
     clearParticipantForm();
   };
@@ -218,7 +244,7 @@ export default function EventParticipant({
     let accessCode;
 
     let isNewParticipant = false;
-    
+
     if (existingParticipant) {
       accessCode = existingParticipant.codigoAcesso;
       updatedEvent = {
@@ -229,16 +255,72 @@ export default function EventParticipant({
       isNewParticipant = true;
       accessCode = createUniqueCode();
       const newParticipant = createNewParticipant(accessCode);
+
+      // If this creation is part of the forced admin flow, mark participant as admin
+      const isForcedAdmin =
+        pendingAdminEvent &&
+        currentEvent &&
+        pendingAdminEvent === currentEvent.codigo;
+      if (isForcedAdmin) {
+        newParticipant.isAdmin = true;
+      }
+
       updatedEvent = {
         ...currentEvent,
         participantes: [...eventParticipants, newParticipant],
       };
+
+      if (isForcedAdmin) {
+        // Persist adminParticipantId at event root so ownership is recorded
+        updatedEvent.adminParticipantId = newParticipant.id;
+      }
     }
 
     try {
       // Determine phone index changes for updates
       if (isNewParticipant) {
-        await saveEventToStorage(updatedEvent, participantPhone.trim(), null);
+        const newPhone = participantPhone.trim();
+
+        // If this is the forced admin creation, we must write the whole event
+        // so the `adminParticipantId` field is persisted. Otherwise, write only participantes subtree.
+        const isForcedAdmin =
+          pendingAdminEvent &&
+          currentEvent &&
+          pendingAdminEvent === currentEvent.codigo;
+        if (isForcedAdmin) {
+          // Full save of event (includes participantes + adminParticipantId)
+          if (window.storage && window.storage.set) {
+            await window.storage.set(
+              `evento:${currentEvent.codigo}`,
+              JSON.stringify(updatedEvent)
+            );
+          }
+
+          // Also update phone index for the new participant
+          const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+          const newNorm = newPhone ? normalizePhone(newPhone) : null;
+          if (newNorm && window.storage.setPhoneIndex) {
+            try {
+              await window.storage.setPhoneIndex(newNorm, currentEvent.codigo);
+              console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
+            } catch (err) {
+              console.warn("Erro ao criar índice de telefone (admin flow):", err, newNorm, currentEvent.codigo);
+            }
+          }
+
+          // Clear pending admin flow and navigate to admin view
+          if (setPendingAdminEvent) setPendingAdminEvent(null);
+          updateCurrentEvent(updatedEvent);
+          updateEventList({
+            ...eventList,
+            [currentEvent.codigo]: updatedEvent,
+          });
+          updateView("admin");
+          showSuccessMessage(false, accessCode);
+          return;
+        }
+
+        await saveEventToStorage(updatedEvent, newPhone, null);
       } else {
         const oldPhone = existingParticipant?.celular || null;
         const newPhone = participantPhone.trim();
@@ -267,7 +349,10 @@ export default function EventParticipant({
       return;
     }
 
-    updateCurrentEvent({ ...currentEvent, participanteAtual: foundParticipant });
+    updateCurrentEvent({
+      ...currentEvent,
+      participanteAtual: foundParticipant,
+    });
     updateView("resultado");
   };
 
@@ -335,31 +420,36 @@ export default function EventParticipant({
   };
 
   const renderParticipantListItem = (participant) => {
-    const childrenNames =
-      (includeChildren ? (participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) || []) : []);
+    const childrenNames = includeChildren
+      ? participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) ||
+        []
+      : [];
     const hasGifts = participant.presentes?.length > 0;
-    const hasChildGifts = includeChildren && participant.filhos?.some(
-      (f) => typeof f !== "string" && f.presentes?.length > 0
-    );
+    const hasChildGifts =
+      includeChildren &&
+      participant.filhos?.some(
+        (f) => typeof f !== "string" && f.presentes?.length > 0
+      );
 
     return (
       <div key={participant.id} className="text-sm text-gray-700">
         {participant.nome}
         {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
-        
+
         {hasGifts && (
           <div className="text-xs text-gray-500 mt-1">
             Sugestões: {participant.presentes.join(", ")}
           </div>
         )}
-        
+
         {hasChildGifts && (
           <div className="text-xs text-gray-500 mt-1">
             {participant.filhos.map((child, i) => {
               const normalized = normalizeChild(child);
               return normalized.presentes.length > 0 ? (
                 <div key={i}>
-                  Sugestões ({normalized.nome}): {normalized.presentes.join(", ")}
+                  Sugestões ({normalized.nome}):{" "}
+                  {normalized.presentes.join(", ")}
                 </div>
               ) : null;
             })}
@@ -506,7 +596,10 @@ export default function EventParticipant({
 
       <div>
         <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
-          Participantes: {includeChildren ? calculateTotalParticipants(eventParticipants) : eventParticipants.length}
+          Participantes:{" "}
+          {includeChildren
+            ? calculateTotalParticipants(eventParticipants)
+            : eventParticipants.length}
           {hasChildren ? ", incluindo filhos" : ""}
         </p>
         <div className="space-y-1">
@@ -535,7 +628,9 @@ export default function EventParticipant({
           type="text"
           placeholder="Código recebido no cadastro"
           value={eventParticipantId}
-          onChange={(e) => updateEventParticipantId(e.target.value.toUpperCase())}
+          onChange={(e) =>
+            updateEventParticipantId(e.target.value.toUpperCase())
+          }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
         />
         <button
@@ -584,15 +679,31 @@ export default function EventParticipant({
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             {currentEvent?.nome}
           </h2>
-          
+
           {currentEvent?.valorSugerido && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">
                 Valor sugerido:{" "}
-                <span className="font-bold">R$ {currentEvent.valorSugerido}</span>
+                <span className="font-bold">
+                  R$ {currentEvent.valorSugerido}
+                </span>
               </p>
             </div>
           )}
+
+          {/* Show admin access button when the current logged-in participant is the admin */}
+          {accessedViaParticipantCode &&
+            currentEvent?.participanteAtual &&
+            currentEvent?.participanteAtual.isAdmin && (
+              <div className="mb-4">
+                <button
+                  onClick={() => updateView("admin")}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"
+                >
+                  Acessar Admin
+                </button>
+              </div>
+            )}
 
           {renderEventContent()}
         </div>

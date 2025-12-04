@@ -67,21 +67,3 @@ export const calculateTotalParticipants = (participants) => {
   
   return `https://wa.me/${celular.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
 }; */
-
-// Simple hash for codes (SHA-256)
-export const hashCode = async (code) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(code.toUpperCase());
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hashHex;
-};
-
-// Verifies if a code matches a hash
-export const validateHash = async (code, hash) => {
-  const codeHash = await hashCode(code);
-  return codeHash === hash;
-};

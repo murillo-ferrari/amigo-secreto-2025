@@ -41,8 +41,8 @@ export const performSecretSantaDraw = async (
     }
   });
 
-  console.log("Number of Participants:", participantsList.length);
-  console.log("Participants:", participantsList);
+  // console.log("Number of Participants:", participantsList.length);
+  // console.log("Participants:", participantsList);
 
   // Check if there are at least 2 different families
   const uniqueFamilies = new Set(participantsList.map((p) => p.responsavel));
@@ -108,17 +108,17 @@ export const performSecretSantaDraw = async (
     }
   }
 
-  console.log("Attempts:", attemptCount);
-  console.log("Violations (same family):", lowestViolations);
+  // console.log("Attempts:", attemptCount);
+  // console.log("Violations (same family):", lowestViolations);
 
   // If no perfect solution found, use the best one found
   if (!isValidDraw && bestAttempt && lowestViolations < Infinity) {
-    console.log(
+    /* console.log(
       "Using best solution found with",
       lowestViolations,
       "person(s) drawing from the same family"
     );
-
+ */
     const msg =
       `Não foi possível encontrar um sorteio onde ninguém tira da própria família.\n\n` +
       `Encontrei uma solução onde ${lowestViolations} pessoa(s) tirarão alguém da própria família (mas não a si mesmo).\n\n` +

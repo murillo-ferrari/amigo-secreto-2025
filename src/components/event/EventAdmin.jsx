@@ -46,23 +46,37 @@ export default function AdminEvento({
       valorSugerido: editValue || undefined,
     };
 
-    // Only store the hashed admin code, not the plain text code
     const eventToStore = { ...updatedEvent };
-    if (Object.prototype.hasOwnProperty.call(eventToStore, "codigoAdmin")) {
-      delete eventToStore.codigoAdmin;
-    }
 
     try {
+      // Ensure authentication is ready and present before attempting write
+      try {
+        if (window.storage && window.storage.waitForAuth) {
+          await window.storage.waitForAuth();
+        }
+      } catch (e) {
+        console.warn("waitForAuth failed:", e);
+      }
+
+      const uid =
+        window.storage && window.storage.getCurrentUserUid
+          ? window.storage.getCurrentUserUid()
+          : null;
+      if (!uid) {
+        message.error({
+          message:
+            "Não foi possível autenticar. Verifique se o navegador permite autenticação anônima (cookies) e tente novamente.",
+        });
+        return;
+      }
+
       await window.storage.set(
         `evento:${currentEvent.codigo}`,
         JSON.stringify(eventToStore)
       );
       // Keep the plain admin code in-memory/state for the current session/UI,
       // but avoid persisting it to the database.
-      const updatedEventForState = {
-        ...updatedEvent,
-        codigoAdmin: currentEvent?.codigoAdmin,
-      };
+      const updatedEventForState = { ...updatedEvent };
       updateCurrentEvent(updatedEventForState);
       updateEventList({
         ...eventList,
@@ -93,15 +107,28 @@ export default function AdminEvento({
   };
 
   const removeParticipant = async (participantId) => {
+    // Prevent removing the admin participant
+    const adminId = currentEvent?.adminParticipantId || null;
+    if (adminId && participantId === adminId) {
+      message.error({
+        message: "Não é possível excluir o participante administrador do evento.",
+      });
+      return;
+    }
+
     const confirmed = await message.confirm({
       title: "Excluir participante",
       message: "Tem certeza que deseja excluir este participante?",
     });
     if (!confirmed) return;
 
+    const participantToRemove = (currentEvent.participantes || []).find(
+      (p) => p.id === participantId
+    );
+
     const updatedEvent = {
       ...currentEvent,
-      participants: (currentEvent.participantes || []).filter(
+      participantes: (currentEvent.participantes || []).filter(
         (p) => p.id !== participantId
       ),
       sorteado: false,
@@ -113,6 +140,20 @@ export default function AdminEvento({
         `evento:${currentEvent.codigo}`,
         JSON.stringify(updatedEvent)
       );
+
+      // Clean up phone index for the removed participant (best-effort)
+      try {
+        const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+        const phone = participantToRemove?.celular || null;
+        const phoneNorm = phone ? normalizePhone(phone) : null;
+        if (phoneNorm && window.storage.removePhoneIndex) {
+          await window.storage.removePhoneIndex(phoneNorm, currentEvent.codigo);
+          console.debug(`Removed phone index ${phoneNorm} -> ${currentEvent.codigo}`);
+        }
+      } catch (err) {
+        console.warn("Erro ao limpar índice de telefone do participante removido:", err);
+      }
+
       updateCurrentEvent(updatedEvent);
       updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
     } catch (error) {
@@ -305,17 +346,7 @@ export default function AdminEvento({
                 <CopyButton text={currentEvent.codigo} />
               </div>
             </div>
-            <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-800">
-                <strong>Código Admin</strong>
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold text-purple-600">
-                  {currentEvent.codigoAdmin}
-                </p>
-                <CopyButton text={currentEvent.codigoAdmin || ""} />
-              </div>
-            </div>
+            {/* Admin code removed from UI - admin is now the first participant */}
           </div>
 
           <div className="mb-6">
@@ -434,13 +465,25 @@ export default function AdminEvento({
                             {p.codigoAcesso}
                           </span>
                           {!currentEvent.sorteado && (
-                            <button
-                              onClick={() => removeParticipant(p.id)}
-                              className="text-red-500 hover:text-red-700"
-                              title="Excluir participante"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            // Do not allow deleting the admin participant
+                            (currentEvent?.adminParticipantId || p.isAdmin) &&
+                            (currentEvent.adminParticipantId === p.id || p.isAdmin) ? (
+                              <button
+                                disabled
+                                className="text-gray-300 cursor-not-allowed"
+                                title="Não é possível excluir o administrador"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => removeParticipant(p.id)}
+                                className="text-red-500 hover:text-red-700"
+                                title="Excluir participante"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )
                           )}
                         </div>
                       </div>

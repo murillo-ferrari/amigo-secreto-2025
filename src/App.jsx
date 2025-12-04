@@ -5,7 +5,7 @@ import CriarEvento from "./components/event/EventCreate";
 import Home from "./components/event/EventHome";
 import EventParticipant from "./components/event/EventParticipant";
 import SecretSantaResults from "./components/event/EventResults";
-import { validateHash } from "./utils/helpers";
+// admin code/hash removed — admin is now defined by the first participant
 import { useMessage } from "./components/message/MessageContext";
 
 /**
@@ -19,6 +19,8 @@ export default function SecretSantaApp() {
   const [loading, setLoading] = useState(false);
   const [storageError, setStorageError] = useState(null);
   const [accessCode, setAccessCode] = useState("");
+  const [pendingAdminEvent, setPendingAdminEvent] = useState(null);
+  const [accessedViaParticipantCode, setAccessedViaParticipantCode] = useState(false);
 
   // Participant form states
   const [participantName, setParticipantName] = useState("");
@@ -82,12 +84,7 @@ export default function SecretSantaApp() {
     }
   };
 
-  const checkAdminCode = async (formattedCode, parsedEvent) => {
-    if (parsedEvent.codigoAdminHash) {
-      return await validateHash(formattedCode, parsedEvent.codigoAdminHash);
-    }
-    return parsedEvent.codigoAdmin === formattedCode;
-  };
+  // admin code/hash removed — admin is now defined by the first participant
 
   const findParticipantByCode = (eventParticipants, formattedCode) => {
     return eventParticipants.find((p) => p.codigoAcesso === formattedCode);
@@ -99,14 +96,7 @@ export default function SecretSantaApp() {
     for (const event of Object.values(eventList)) {
       const eventParticipants = event.participantes || [];
 
-      const isAdmin = await checkAdminCode(formattedCode, event);
-      if (isAdmin) {
-        return {
-          foundEvent: event,
-          isAdmin: true,
-          foundParticipant: null,
-        };
-      }
+      // Admin access via admin code removed; only participant codes are considered here.
 
       const foundParticipant = findParticipantByCode(
         eventParticipants,
@@ -121,7 +111,7 @@ export default function SecretSantaApp() {
   };
 
   const handleAdminAccess = (foundEvent, formattedCode) => {
-    setCurrentEvent({ ...foundEvent, codigoAdmin: formattedCode });
+    setCurrentEvent(foundEvent);
     setView("admin");
     setAccessCode("");
   };
@@ -130,16 +120,18 @@ export default function SecretSantaApp() {
     setCurrentEvent({ ...foundEvent, participanteAtual: foundParticipant });
     setView("resultado");
     setAccessCode("");
+    setAccessedViaParticipantCode(true);
   };
 
   const handleExistingParticipantNoDraw = (foundEvent, foundParticipant) => {
-    setCurrentEvent(foundEvent);
+    setCurrentEvent({ ...foundEvent, participanteAtual: foundParticipant });
     setParticipantName(foundParticipant.nome);
     setParticipantMobileNumber(foundParticipant.celular);
     setParticipantChildren(foundParticipant.filhos || []);
     setGifts(foundParticipant.presentes || []);
     setView("evento");
     setAccessCode("");
+    setAccessedViaParticipantCode(true);
   };
 
   const handleNewParticipant = (foundEvent) => {
@@ -150,6 +142,7 @@ export default function SecretSantaApp() {
     setGifts([]);
     setView("evento");
     setAccessCode("");
+    setAccessedViaParticipantCode(false);
   };
 
   const fetchEventByCode = async (codeArg) => {
@@ -395,6 +388,7 @@ export default function SecretSantaApp() {
         eventos={eventList}
         setEventos={setEventList}
         setEventoAtual={setCurrentEvent}
+        setPendingAdminEvent={setPendingAdminEvent}
       />
     );
   } else if (view === "evento") {
@@ -414,6 +408,10 @@ export default function SecretSantaApp() {
         presentes={gifts}
         setPresentes={setGifts}
         loading={loading}
+        pendingAdminEvent={pendingAdminEvent}
+        setPendingAdminEvent={setPendingAdminEvent}
+        accessedViaParticipantCode={accessedViaParticipantCode}
+        setAccessedViaParticipantCode={setAccessedViaParticipantCode}
       />
     );
   } else if (view === "admin") {

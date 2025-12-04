@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { createUniqueCode, hashCode } from "../../utils/helpers";
+import { createUniqueCode } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
-import QRCodeCard from "./QRCode";
 
 export default function CriarEvento({
   setView,
   eventos: eventList,
   setEventos: updateEventList,
   setEventoAtual: updateCurrentEvent,
+  setPendingAdminEvent,
 }) {
   const [eventName, setEventName] = useState("");
   const [suggestedValue, setSuggestedValue] = useState("");
@@ -24,10 +24,6 @@ export default function CriarEvento({
     }
 
     const eventUniqueCode = createUniqueCode();
-    const adminUniqueCode = createUniqueCode();
-
-    // Hash do código admin para armazenamento seguro
-    const adminUniqueCodeHash = await hashCode(adminUniqueCode);
 
     /* Check if those pt-br string can be renamed to english */
     const newEventRecord = {
@@ -35,17 +31,34 @@ export default function CriarEvento({
       valorSugerido: suggestedValue,
       incluirFilhos: includeChildren,
       codigo: eventUniqueCode,
-      codigoAdminHash: adminUniqueCodeHash, // Armazena hash ao invés do código em texto
-      codigoAdmin: adminUniqueCode, // Mantém temporariamente para mostrar ao usuário
       participantes: [],
       sorteado: false,
       sorteio: {},
       dataCriacao: new Date().toISOString(),
     };
 
-    // To save in Firebase, remove the admin code in text
+    // To save in Firebase, remove the admin code in text and add ownership metadata
     const eventToSave = { ...newEventRecord };
-    delete eventToSave.codigoAdmin;
+
+    // Attach createdBy / createdAt using authenticated UID when available
+    try {
+      if (window.storage && window.storage.waitForAuth) {
+        await window.storage.waitForAuth();
+      }
+      const uid = window.storage && window.storage.getCurrentUserUid ? window.storage.getCurrentUserUid() : null;
+      if (uid) {
+        eventToSave.createdBy = uid;
+        // Also keep createdBy/createdAt in the in-memory record so subsequent edits preserve them
+        newEventRecord.createdBy = uid;
+      }
+      eventToSave.createdAt = Date.now();
+      newEventRecord.createdAt = eventToSave.createdAt;
+    } catch (e) {
+      // Best-effort: if auth isn't available, still proceed without createdBy
+      console.warn("Não foi possível obter UID do usuário ao criar evento:", e);
+      eventToSave.createdAt = Date.now();
+      newEventRecord.createdAt = eventToSave.createdAt;
+    }
 
     try {
       await window.storage.set(
@@ -56,8 +69,12 @@ export default function CriarEvento({
       updateCurrentEvent(newEventRecord); // Mantém o código em texto para a sessão atual
       setEventName("");
       setSuggestedValue("");
-      // Show QR on create screen first
-      setCreatedEvent(newEventRecord);
+
+      // Force creation of the first participant (admin) — set pending flag and navigate
+      if (setPendingAdminEvent) {
+        setPendingAdminEvent(eventUniqueCode);
+      }
+      setView("evento");
     } catch (error) {
       message.error({ message: "Erro ao criar evento. Tente novamente." });
       console.error("Erro ao criar evento:", error);
@@ -88,7 +105,7 @@ export default function CriarEvento({
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: Amigo Secreto da Família 2024"
+                  placeholder="Ex: Amigo Secreto da Família 2025"
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
@@ -128,34 +145,7 @@ export default function CriarEvento({
                 Criar Evento
               </button>
             </div>
-          ) : (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Evento criado</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Código de participantes: <strong>{createdEvent.codigo}</strong>
-              </p>
-              <QRCodeCard
-                url={`${window.location.origin}?code=${createdEvent.codigo}`}
-                label="Compartilhe o evento via QR"
-              />
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => setView("admin")}
-                  className="flex-1 bg-green-600 text-white py-2 rounded"
-                >
-                  Ir para Admin
-                </button>
-                <button
-                  onClick={() => {
-                    setCreatedEvent(null);
-                  }}
-                  className="flex-1 bg-gray-100 py-2 rounded"
-                >
-                  Fechar
-                </button>
-              </div>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
       <Footer />

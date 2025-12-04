@@ -38,7 +38,9 @@ export default function Home({
               type="text"
               placeholder="Digite o ID do evento / seu código de acesso"
               value={eventAccessCode}
-              onChange={(e) => updateEventAccessCode(e.target.value.toUpperCase())}
+              onChange={(e) =>
+                updateEventAccessCode(e.target.value.toUpperCase())
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
             />
             <button

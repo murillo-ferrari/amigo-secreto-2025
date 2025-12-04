@@ -125,13 +125,14 @@ The `firebase.json` configuration serves the SPA from `dist/` with client-side r
 ## 🔒 Security Notes
 
 - **Admin codes are hashed** using SHA-256 before being stored in the database. The plain admin code is only shown once at event creation and kept in-memory for the current session.
-- **Database rules** (`database.rules.json`) are currently open for development. For production, restrict access appropriately:
+- **Admin ownership** — The first participant created in an event is designated as the event admin and stored as `adminParticipantId` on the event. There is no separate admin code.
+- **Database rules** (`database.rules.json`) are currently open for development. For production, restrict access appropriately; for example you can require authenticated writes or limit which fields can be changed by clients. Example (development-friendly) rules:
   ```json
   {
     "rules": {
       "evento:$eventId": {
         ".read": true,
-        ".write": "!data.exists() || data.child('codigoAdminHash').val() === newData.child('codigoAdminHash').val()"
+        ".write": "auth != null"
       }
     }
   }
