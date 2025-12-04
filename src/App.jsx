@@ -227,14 +227,24 @@ export default function SecretSantaApp() {
   };
 
   const findParticipantByPhone = async (cleanedMobileNumber) => {
-    // First, try to look up event via phone index
-    if (window.storage.getEventCodeByPhone) {
+    // We'll collect all matching event/participant pairs (0..N)
+    const matches = [];
+
+    // First, try phone index which may return multiple event codes
+    if (window.storage.getEventCodesByPhone || window.storage.getEventCodeByPhone) {
       try {
-        const eventCode = await window.storage.getEventCodeByPhone(cleanedMobileNumber);
-        if (eventCode) {
-          // Found event code in phone index, fetch the event
-          const result = await window.storage.get(`evento:${eventCode}`);
-          if (result) {
+        let codes = [];
+        if (window.storage.getEventCodesByPhone) {
+          codes = await window.storage.getEventCodesByPhone(cleanedMobileNumber);
+        } else if (window.storage.getEventCodeByPhone) {
+          const single = await window.storage.getEventCodeByPhone(cleanedMobileNumber);
+          if (single) codes = [single];
+        }
+
+        for (const eventCode of codes) {
+          try {
+            const result = await window.storage.get(`evento:${eventCode}`);
+            if (!result) continue;
             const event = JSON.parse(result.value);
             const participantsList = event.participantes || [];
             const participant = participantsList.find((p) =>
@@ -243,49 +253,101 @@ export default function SecretSantaApp() {
             if (participant) {
               // Add to memory for future use
               setEventList((prev) => ({ ...prev, [event.codigo]: event }));
-              return { event, participant };
+              matches.push({ event, participant });
+            } else {
+              // Even if participant not found, still add event as possible selection
+              matches.push({ event, participant: null });
             }
+          } catch (err) {
+            console.warn("Failed fetching event from index code:", eventCode, err);
           }
         }
       } catch (error) {
         console.warn("Phone index lookup failed:", error);
-        // Fall through to in-memory search
       }
     }
-    
-    // Fallback: search in in-memory events
+
+    // Fallback: also search in-memory events (to catch cases not indexed)
     for (const event of Object.values(eventList)) {
       const participantsList = event.participantes || [];
       const participant = participantsList.find((p) =>
         matchesPhoneNumber(p.celular, cleanedMobileNumber)
       );
+      // Avoid duplicates (by event.codigo)
       if (participant) {
-        return { event, participant };
+        if (!matches.some((m) => m.event.codigo === event.codigo)) {
+          matches.push({ event, participant });
+        }
       }
     }
 
-    return null;
+    return matches; // array possibly empty
   };
 
   const retrieveParticipantByPhone = async (mobileNumberInput) => {
     setLoading(true);
-
     try {
       const cleanedMobileNumber = (mobileNumberInput || "").replace(/\D/g, "");
 
       if (!cleanedMobileNumber) {
         message.error({ message: "Informe o celular (com DDD)" });
+        return [];
+      }
+
+      const matches = await findParticipantByPhone(cleanedMobileNumber);
+
+      if (!matches || matches.length === 0) {
+        return [];
+      }
+
+      // If only one match, proceed with the previous behavior (navigate/show)
+      if (matches.length === 1) {
+        const { event: parsedEvent, participant } = matches[0];
+        if (parsedEvent.sorteado) {
+          handleExistingParticipantWithDraw(parsedEvent, participant);
+          return matches;
+        }
+
+        handleExistingParticipantNoDraw(parsedEvent, participant);
+        return matches;
+      }
+
+      // Multiple matches: return them to the caller to let UI choose
+      return matches;
+    } catch (error) {
+      console.error("Error recovering by phone:", error);
+      setStorageError(error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Recover a participant inside a specific event (used when user picks from multiple matches)
+  const recoverParticipantInEvent = async (eventCode, mobileNumberInput) => {
+    setLoading(true);
+    try {
+      const cleanedMobileNumber = (mobileNumberInput || "").replace(/\D/g, "");
+      if (!cleanedMobileNumber) {
+        message.error({ message: "Informe o celular (com DDD)" });
         return;
       }
 
-      const result = await findParticipantByPhone(cleanedMobileNumber);
-
+      const result = await window.storage.get(`evento:${eventCode}`);
       if (!result) {
-        message.error({ message: "Celular não encontrado. Verifique o número e tente novamente." });
+        message.error({ message: "Evento não encontrado." });
         return;
       }
+      const parsedEvent = JSON.parse(result.value);
+      const participantsList = parsedEvent.participantes || [];
+      const participant = participantsList.find((p) =>
+        matchesPhoneNumber(p.celular, cleanedMobileNumber)
+      );
 
-      const { event: parsedEvent, participant } = result;
+      if (!participant) {
+        message.error({ message: "Participante não encontrado neste evento." });
+        return;
+      }
 
       if (parsedEvent.sorteado) {
         handleExistingParticipantWithDraw(parsedEvent, participant);
@@ -294,7 +356,7 @@ export default function SecretSantaApp() {
 
       handleExistingParticipantNoDraw(parsedEvent, participant);
     } catch (error) {
-      console.error("Error recovering by phone:", error);
+      console.error("Error recovering participant in event:", error);
       setStorageError(error);
     } finally {
       setLoading(false);
@@ -322,6 +384,7 @@ export default function SecretSantaApp() {
         setCodigoAcesso={setAccessCode}
         acessarEvento={fetchEventByCode}
         recuperarPorCelular={retrieveParticipantByPhone}
+        recuperarEventoPorCelular={recoverParticipantInEvent}
         loading={loading}
       />
     );
