@@ -57,6 +57,15 @@ export const calculateTotalParticipants = (participants) => {
   }, 0);
 };
 
+// Normalize an access code for comparison/storage:
+// - If the value contains digits (phone), return digits-only string
+// - Otherwise return uppercased string
+export const normalizeAccessCode = (val) => {
+  if (!val) return "";
+  const digits = String(val).replace(/\D/g, "");
+  if (digits.length >= 8) return digits; // likely a phone
+  return String(val).toUpperCase();
+};
 // Gera URL do WhatsApp com mensagem
 /* export const gerarLinkWhatsApp = (nome, amigo, celular, nomeEvento, valorSugerido) => {
   const mensagem = `🎁 *Amigo Secreto - ${nomeEvento}*\n\n` +

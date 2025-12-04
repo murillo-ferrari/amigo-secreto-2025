@@ -139,6 +139,20 @@ The `firebase.json` configuration serves the SPA from `dist/` with client-side r
   ```
 - Never commit `.env.local` or service account keys to version control.
 
+## 📱 Phone Auth (SMS) Setup
+
+This project supports Firebase Phone Authentication (SMS) to verify users' phone numbers during recovery and admin-sensitive actions.
+
+- **Enable Phone provider**: In Firebase Console → Authentication → Sign-in method → enable **Phone**.
+- **reCAPTCHA**: For web apps Firebase requires reCAPTCHA. Add your development domains (e.g. `localhost`) and production domain to the Authorized domains list in the Firebase Console. The app uses invisible reCAPTCHA by default.
+- **Test numbers**: For local development add test phone numbers in the Auth → Sign-in method → Phone → Phone numbers for testing. This avoids sending real SMS.
+- **Local dev note**: When using real phone numbers, Firebase may enforce quotas and reCAPTCHA flows. Prefer test numbers while developing.
+
+How the app uses Phone Auth:
+- The home/recovery UI will send an SMS verification code to the provided number and prompt the user to enter it.
+- After successful verification the browser session will be signed in with Firebase Auth and the UID will be used to authorize admin actions.
+- The app still keeps admin ownership tied to the participant (via `createdByUid` and `adminParticipantId`) so only the verified creator can perform admin writes.
+
 ## 📜 Available Scripts
 
 | Command           | Description                            |

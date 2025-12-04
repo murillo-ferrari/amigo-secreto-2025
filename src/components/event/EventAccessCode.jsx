@@ -1,0 +1,295 @@
+import { ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
+import { useMessage } from "../message/MessageContext";
+
+/**
+ * EventAccessCode - Handles phone-based event access with SMS verification.
+ *
+ * Flow:
+ * 1. User enters phone in Home and clicks "Acessar pelo Celular"
+ * 2. SMS code is sent to the phone
+ * 3. User enters the SMS code to verify identity
+ * 4. After verification, search for events linked to that phone
+ * 5. If 1 event: navigate directly
+ * 6. If multiple events: show list for user to choose
+ */
+export default function EventAccessCode({
+  recuperarPorCelular: recoverCodeByPhone,
+  recuperarEventoPorCelular,
+  loading,
+  phoneNumber = "",
+  triggerAccess = false,
+  onReset = null,
+}) {
+  const [step, setStep] = useState("idle"); // idle | sending | code | searching | results
+  const [smsCode, setSmsCode] = useState("");
+  const [matches, setMatches] = useState([]);
+  const [error, setError] = useState("");
+  const [internalLoading, setInternalLoading] = useState(false);
+  const message = useMessage();
+
+  // When parent triggers access, start the SMS flow
+  useEffect(() => {
+    if (triggerAccess && phoneNumber) {
+      handleStartSmsVerification();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerAccess, phoneNumber]);
+
+  const reset = () => {
+    setStep("idle");
+    setSmsCode("");
+    setMatches([]);
+    setError("");
+    setInternalLoading(false);
+    if (onReset) onReset();
+  };
+
+  const handleStartSmsVerification = async () => {
+    // Validate phone
+    const valid = verifyMobileNumber(phoneNumber);
+    if (!valid.isValid) {
+      setError(valid.errorMessage);
+      if (message?.error) message.error({ message: valid.errorMessage });
+      return;
+    }
+
+    setError("");
+    setStep("sending");
+    setInternalLoading(true);
+
+    try {
+      if (window.storage?.sendPhoneVerification) {
+        await window.storage.sendPhoneVerification(phoneNumber);
+        setStep("code");
+      } else {
+        // Phone Auth not available - skip verification and go directly to search
+        console.warn("Phone Auth not available, proceeding without SMS verification");
+        await performSearch();
+      }
+    } catch (err) {
+      console.error("SMS send failed:", err);
+      
+      // Check for specific Firebase errors
+      const errorMessage = err?.message || "";
+      const errorCode = err?.code || "";
+      
+      if (errorCode === "auth/invalid-app-credential" || errorMessage.includes("reCAPTCHA")) {
+        setError("Erro de configuração do reCAPTCHA. Verifique se o domínio está autorizado no Firebase Console.");
+      } else if (errorCode === "auth/missing-phone-provider") {
+        setError("Autenticação por telefone não está habilitada. Habilite no Firebase Console.");
+      } else if (errorCode === "auth/quota-exceeded") {
+        setError("Limite de SMS excedido. Tente novamente mais tarde.");
+      } else if (errorCode === "auth/invalid-phone-number") {
+        setError("Número de telefone inválido. Verifique o formato.");
+      } else {
+        // Fallback: proceed to search without verification (for development/testing)
+        setError("Não foi possível enviar SMS. Buscando diretamente...");
+        await performSearch();
+        return;
+      }
+      setStep("idle");
+      if (onReset) onReset();
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  const confirmSmsCode = async () => {
+    if (!smsCode || smsCode.length < 6) {
+      setError("Digite o código de 6 dígitos recebido por SMS");
+      return;
+    }
+
+    setError("");
+    setInternalLoading(true);
+
+    try {
+      if (window.storage?.confirmPhoneCode) {
+        await window.storage.confirmPhoneCode(smsCode);
+      }
+      // After confirmation, search for events
+      await performSearch();
+    } catch (err) {
+      console.error("SMS confirmation failed:", err);
+      setError("Código inválido ou expirado. Tente novamente.");
+      setInternalLoading(false);
+    }
+  };
+
+  const performSearch = async () => {
+    setStep("searching");
+    setInternalLoading(true);
+
+    try {
+      const result = await recoverCodeByPhone(phoneNumber);
+
+      // Normalize results
+      const normalized = normalizeResults(result);
+
+      if (!normalized || normalized.length === 0) {
+        setMatches([]);
+        setStep("results");
+        setError("Celular não encontrado em nenhum evento. Verifique o número.");
+        if (message?.error) {
+          message.error({ message: "Celular não encontrado. Verifique o número e tente novamente." });
+        }
+        return;
+      }
+
+      // Single match: navigate directly
+      if (normalized.length === 1) {
+        const eventCode = normalized[0].event?.codigo;
+        if (eventCode && recuperarEventoPorCelular) {
+          await recuperarEventoPorCelular(eventCode, phoneNumber);
+          reset();
+          return;
+        }
+      }
+
+      // Multiple matches: show selection UI
+      setMatches(normalized);
+      setStep("results");
+    } catch (err) {
+      console.error("Search failed:", err);
+      setError("Erro ao buscar eventos. Tente novamente.");
+      setStep("results");
+    } finally {
+      setInternalLoading(false);
+    }
+  };
+
+  const normalizeResults = (res) => {
+    if (!res) return [];
+    const arr = Array.isArray(res) ? res : [res];
+    return arr
+      .map((item) => {
+        if (!item) return null;
+        if (item.event) return item;
+        if (item.codigo || item.code) return { event: item, participant: null };
+        return null;
+      })
+      .filter(Boolean);
+  };
+
+  const handleSelectEvent = async (eventCode) => {
+    if (recuperarEventoPorCelular) {
+      await recuperarEventoPorCelular(eventCode, phoneNumber);
+      reset();
+    }
+  };
+
+  const isLoading = loading || internalLoading;
+
+  // Render nothing when idle
+  if (step === "idle") {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
+      {/* Sending SMS */}
+      {step === "sending" && (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <p className="text-gray-700">Enviando código SMS para {formatMobileNumber(phoneNumber)}...</p>
+        </div>
+      )}
+
+      {/* Enter SMS Code */}
+      {step === "code" && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700 text-center">
+            Digite o código de 6 dígitos enviado para <strong>{formatMobileNumber(phoneNumber)}</strong>
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={smsCode}
+            onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="000000"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl tracking-widest font-mono"
+            autoFocus
+          />
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={confirmSmsCode}
+              disabled={isLoading || smsCode.length < 6}
+              className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
+            >
+              {isLoading ? "Verificando..." : "Confirmar Código"}
+            </button>
+            <button
+              onClick={reset}
+              className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              Cancelar
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 text-center">
+            Não recebeu? Aguarde alguns segundos e tente novamente.
+          </p>
+        </div>
+      )}
+
+      {/* Searching */}
+      {step === "searching" && (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <p className="text-gray-700">Buscando seus eventos...</p>
+        </div>
+      )}
+
+      {/* Results: Multiple events */}
+      {step === "results" && matches.length > 1 && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700 text-center font-medium">
+            Encontramos {matches.length} eventos com esse número. <br />Selecione qual deseja acessar:
+          </p>
+          <div className="space-y-2">
+            {matches.map((m) => (
+              <div
+                key={m.event.codigo}
+                className="flex flex-col gap-3 p-3 bg-white rounded-lg border items-center justify-between sm:flex-row"
+              >
+                <div className="text-center sm:text-left">
+                  <div className="font-medium text-gray-800">{m.event.nome}</div>
+                  <div className="text-xs text-gray-500">Código: {m.event.codigo}</div>
+                </div>
+                <button
+                  onClick={() => handleSelectEvent(m.event.codigo)}
+                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center gap-2 justify-center font-medium transition"
+                >
+                  <span>Acessar</span>
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={reset}
+            className="w-full mt-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+          >
+            Voltar
+          </button>
+        </div>
+      )}
+
+      {/* Results: No events found */}
+      {step === "results" && matches.length === 0 && (
+        <div className="text-center py-4 space-y-3">
+          <p className="text-gray-700">{error || "Nenhum evento encontrado para este número."}</p>
+          <button
+            onClick={reset}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+          >
+            Tentar outro número
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

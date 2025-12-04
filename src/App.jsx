@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { normalizeAccessCode } from "./utils/helpers";
 import ErrorScreen from "./components/common/ErrorScreen";
 import AdminEvento from "./components/event/EventAdmin";
 import CriarEvento from "./components/event/EventCreate";
@@ -21,6 +22,7 @@ export default function SecretSantaApp() {
   const [accessCode, setAccessCode] = useState("");
   const [pendingAdminEvent, setPendingAdminEvent] = useState(null);
   const [accessedViaParticipantCode, setAccessedViaParticipantCode] = useState(false);
+  const [currentUid, setCurrentUid] = useState(null);
 
   // Participant form states
   const [participantName, setParticipantName] = useState("");
@@ -54,6 +56,23 @@ export default function SecretSantaApp() {
     };
 
     initializeStorage();
+
+    // Listen to auth state from firebase adapter (phone auth / anon)
+    try {
+      if (window.storage && window.storage.onAuthStateChanged) {
+        window.storage.onAuthStateChanged((user) => {
+          try {
+            setCurrentUid(user ? user.uid : null);
+          } catch (e) {
+            setCurrentUid(null);
+          }
+        });
+      } else if (window.storage && window.storage.getCurrentUserUid) {
+        setCurrentUid(window.storage.getCurrentUserUid());
+      }
+    } catch (err) {
+      console.warn("Auth listener setup failed:", err);
+    }
   }, []);
 
   const loadEvents = async () => {
@@ -87,7 +106,9 @@ export default function SecretSantaApp() {
   // admin code/hash removed — admin is now defined by the first participant
 
   const findParticipantByCode = (eventParticipants, formattedCode) => {
-    return eventParticipants.find((p) => p.codigoAcesso === formattedCode);
+    if (!formattedCode) return null;
+    const normalizedInput = normalizeAccessCode(formattedCode);
+    return eventParticipants.find((p) => normalizeAccessCode(p.codigoAcesso) === normalizedInput);
   };
 
   const searchEventByCode = async (formattedCode) => {
@@ -148,6 +169,14 @@ export default function SecretSantaApp() {
   const fetchEventByCode = async (codeArg) => {
     setLoading(true);
     const formattedCode = (codeArg || accessCode || "").toUpperCase();
+    // If the input looks like a phone number (digits, 10-11), treat it as phone recovery
+    const cleanedMobile = (codeArg || accessCode || "").replace(/\D/g, "");
+    if (cleanedMobile && (cleanedMobile.length === 10 || cleanedMobile.length === 11)) {
+      // Delegate to phone recovery flow
+      await retrieveParticipantByPhone(cleanedMobile);
+      setLoading(false);
+      return;
+    }
     // Prevent empty code lookup which may trigger forbidden DB access
     if (!formattedCode || formattedCode.trim() === "") {
       message.error({ message: "Informe o código do evento antes de acessar." });
@@ -379,6 +408,7 @@ export default function SecretSantaApp() {
         recuperarPorCelular={retrieveParticipantByPhone}
         recuperarEventoPorCelular={recoverParticipantInEvent}
         loading={loading}
+        verified={!!currentUid}
       />
     );
   } else if (view === "criar") {

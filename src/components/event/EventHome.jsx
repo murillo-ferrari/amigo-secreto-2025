@@ -1,20 +1,48 @@
+import { useState } from "react";
+import { formatMobileNumber } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
-import RecoverCode from "./EventRecoverCode";
+import EventAccessCode from "./EventAccessCode";
 
 export default function Home({
   setView,
   codigoAcesso: eventAccessCode,
   setCodigoAcesso: updateEventAccessCode,
-  acessarEvento: accessEvent,
   recuperarPorCelular: retrieveCodeByPhone,
   recuperarEventoPorCelular,
   loading,
+  verified,
 }) {
+  const [triggerAccess, setTriggerAccess] = useState(false);
+
+  const handleAccessClick = () => {
+    const digits = (eventAccessCode || "").replace(/\D/g, "");
+    if (digits.length < 10) {
+      return; // Input validation handled by disabled state
+    }
+    setTriggerAccess(true);
+  };
+
+  const handleReset = () => {
+    setTriggerAccess(false);
+  };
+
+  const isPhoneValid = (eventAccessCode || "").replace(/\D/g, "").length >= 10;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
       <div className="max-w-md mx-auto pt-12">
-        <Header />
+        {/* reCAPTCHA container - Firebase requires this element to exist in DOM */}
+        {/* Using visibility:hidden keeps it in layout but invisible */}
+        <div 
+          id="recaptcha-container" 
+          style={{ 
+            visibility: "hidden",
+            height: 0,
+            overflow: "hidden"
+          }} 
+        />
+        <Header verified={verified} />
 
         <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
           <button
@@ -35,25 +63,32 @@ export default function Home({
 
           <div>
             <input
-              type="text"
-              placeholder="Digite o ID do evento / seu código de acesso"
+              type="tel"
+              placeholder="Digite seu celular (com DDD)"
               value={eventAccessCode}
               onChange={(e) =>
-                updateEventAccessCode(e.target.value.toUpperCase())
+                updateEventAccessCode(formatMobileNumber(e.target.value))
               }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
+              disabled={triggerAccess}
             />
-            <button
-              onClick={() => accessEvent()}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
-            >
-              {loading ? "Carregando..." : "Acessar Evento"}
-            </button>
+            {!triggerAccess && (
+              <button
+                onClick={handleAccessClick}
+                disabled={loading || !isPhoneValid}
+                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Carregando..." : "Acessar Evento"}
+              </button>
+            )}
 
-            <RecoverCode
+            <EventAccessCode
               recuperarPorCelular={retrieveCodeByPhone}
               recuperarEventoPorCelular={recuperarEventoPorCelular}
               loading={loading}
+              phoneNumber={eventAccessCode}
+              triggerAccess={triggerAccess}
+              onReset={handleReset}
             />
           </div>
         </div>

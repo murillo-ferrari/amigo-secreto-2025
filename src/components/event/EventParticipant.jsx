@@ -5,6 +5,7 @@ import {
   createUniqueCode,
   formatMobileNumber,
   verifyMobileNumber,
+  normalizeAccessCode,
 } from "../../utils/helpers";
 import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
@@ -147,15 +148,29 @@ export default function EventParticipant({
     return (participantsChildren || []).map(normalizeChild);
   };
 
-  const createNewParticipant = (accessCode) => {
-    return {
+  const createNewParticipant = () => {
+    const phoneDigits = (participantPhone || "").replace(/\D/g, "");
+    const codeToUse = phoneDigits && phoneDigits.length >= 10 ? phoneDigits : createUniqueCode();
+
+    const base = {
       id: createUniqueCode(),
       nome: participantName.trim(),
       celular: participantPhone.trim(),
       filhos: includeChildren ? normalizeChildren() : [],
       presentes: [...gifts],
-      codigoAcesso: accessCode,
+      codigoAcesso: codeToUse,
     };
+
+    try {
+      if (window.storage && window.storage.getCurrentUserUid) {
+        const uid = window.storage.getCurrentUserUid();
+        if (uid) base.createdByUid = uid;
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    return base;
   };
 
   const updateExistingParticipant = (existingParticipant) => {
@@ -269,8 +284,10 @@ export default function EventParticipant({
       };
     } else {
       isNewParticipant = true;
-      accessCode = createUniqueCode();
-      const newParticipant = createNewParticipant(accessCode);
+      // Prefer using the participant's phone digits as the access code when available
+      const phoneDigits = (participantPhone || "").replace(/\D/g, "");
+      accessCode = phoneDigits && phoneDigits.length >= 10 ? phoneDigits : createUniqueCode();
+      const newParticipant = createNewParticipant();
 
       // If this creation is part of the forced admin flow, mark participant as admin
       const isForcedAdmin =
@@ -365,8 +382,9 @@ export default function EventParticipant({
 
   // ===== View Result After Draw =====
   const showParticipantResult = () => {
+    const normalizedInput = normalizeAccessCode(eventParticipantId);
     const foundParticipant = eventParticipants.find(
-      (p) => p.codigoAcesso === eventParticipantId.toUpperCase()
+      (p) => normalizeAccessCode(p.codigoAcesso) === normalizedInput
     );
 
     if (!foundParticipant) {
@@ -492,7 +510,13 @@ export default function EventParticipant({
       </p>
       <div className="bg-white border border-green-500 rounded-lg p-4 mb-3 flex items-center justify-between">
         <p className="text-3xl font-bold text-green-600 tracking-wider">
-          {participantCode}
+          {(() => {
+            const digits = (participantCode || "").replace(/\D/g, "");
+            if (digits.length >= 10) {
+              return formatMobileNumber(digits);
+            }
+            return participantCode;
+          })()}
         </p>
         <CopyButton text={participantCode} />
       </div>

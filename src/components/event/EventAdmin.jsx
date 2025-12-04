@@ -33,6 +33,32 @@ export default function AdminEvento({
   const [editValue, setEditValue] = useState(currentEvent?.valorSugerido || "");
   const [isEditing, setIsEditing] = useState(false);
 
+  // Helper: verify current authenticated UID is the event owner/admin creator
+  const isAuthorizedAdmin = () => {
+    try {
+      if (!window.storage || !window.storage.getCurrentUserUid) return false;
+      const uid = window.storage.getCurrentUserUid();
+      if (!uid) return false;
+
+      // Primary ownership: event.createdByUid (set when participant created)
+      if (currentEvent?.createdByUid && currentEvent.createdByUid === uid)
+        return true;
+
+      // Fallback: admin participant's createdByUid
+      const adminId = currentEvent?.adminParticipantId || null;
+      if (adminId) {
+        const adminParticipant = (currentEvent.participantes || []).find(
+          (p) => p.id === adminId
+        );
+        if (adminParticipant && adminParticipant.createdByUid === uid) return true;
+      }
+
+      return false;
+    } catch (err) {
+      return false;
+    }
+  };
+
   const saveEventMeta = async () => {
     const nameTrim = (editName || "").trim();
     if (!nameTrim) {
@@ -58,14 +84,10 @@ export default function AdminEvento({
         console.warn("waitForAuth failed:", e);
       }
 
-      const uid =
-        window.storage && window.storage.getCurrentUserUid
-          ? window.storage.getCurrentUserUid()
-          : null;
-      if (!uid) {
+      if (!isAuthorizedAdmin()) {
         message.error({
           message:
-            "Não foi possível autenticar. Verifique se o navegador permite autenticação anônima (cookies) e tente novamente.",
+            "Você não está autorizado a alterar este evento. Verifique se está usando a conta autenticada que criou o evento.",
         });
         return;
       }
@@ -114,6 +136,11 @@ export default function AdminEvento({
         message:
           "Não é possível excluir o participante administrador do evento.",
       });
+      return;
+    }
+
+    if (!isAuthorizedAdmin()) {
+      message.error({ message: "Você não está autorizado a excluir participantes." });
       return;
     }
 
@@ -171,6 +198,11 @@ export default function AdminEvento({
   };
 
   const deleteCurrentDraw = async () => {
+    if (!isAuthorizedAdmin()) {
+      message.error({ message: "Você não está autorizado a excluir o sorteio." });
+      return;
+    }
+
     const confirmed = await message.confirm({
       title: "Excluir sorteio",
       message:
@@ -200,6 +232,11 @@ export default function AdminEvento({
   };
 
   const redoSecretDraw = async () => {
+    if (!isAuthorizedAdmin()) {
+      message.error({ message: "Você não está autorizado a refazer o sorteio." });
+      return;
+    }
+
     const confirmed = await message.confirm({
       title: "Refazer sorteio",
       message:
@@ -217,6 +254,11 @@ export default function AdminEvento({
   };
 
   const removeEvent = async (eventId) => {
+    if (!isAuthorizedAdmin()) {
+      message.error({ message: "Você não está autorizado a excluir este evento." });
+      return false;
+    }
+
     const confirmed = await message.confirm({
       title: "Excluir evento",
       message:

@@ -5,8 +5,8 @@
 
     "eventos": {
       "$eventId": {
-        ".read": true,
-        
+        ".read": "auth != null",
+
         ".write": "auth != null",
         
         "createdBy": {
@@ -53,11 +53,19 @@
     ,
     "phones": {
       "$phone": {
-        ".read": true,
+        ".read": false,
         ".write": "auth != null",
         "$eventCode": {
           ".validate": "newData.hasChildren(['updatedAt']) || newData.isNumber() || newData.isString()"
         }
+      }
+    },
+
+    "phoneAuthSessions": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['phone','createdAt','expiresAt']) && newData.child('phone').isString() && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber()"
       }
     }
   }
