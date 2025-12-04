@@ -53,7 +53,7 @@
     ,
     "phones": {
       "$phone": {
-        ".read": false,
+        ".read": "auth != null",
         ".write": "auth != null",
         "$eventCode": {
           ".validate": "newData.hasChildren(['updatedAt']) || newData.isNumber() || newData.isString()"
