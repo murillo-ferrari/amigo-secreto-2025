@@ -8,6 +8,7 @@ export default function Home({
   setCodigoAcesso: updateEventAccessCode,
   acessarEvento: accessEvent,
   recuperarPorCelular: retrieveCodeByPhone,
+  recuperarEventoPorCelular,
   loading,
 }) {
   return (
@@ -49,6 +50,7 @@ export default function Home({
 
             <RecoverCode
               recuperarPorCelular={retrieveCodeByPhone}
+              recuperarEventoPorCelular={recuperarEventoPorCelular}
               loading={loading}
             />
           </div>

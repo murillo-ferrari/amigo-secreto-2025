@@ -64,7 +64,10 @@ export default function AdminEvento({
         codigoAdmin: currentEvent?.codigoAdmin,
       };
       updateCurrentEvent(updatedEventForState);
-      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEventForState });
+      updateEventList({
+        ...eventList,
+        [currentEvent.codigo]: updatedEventForState,
+      });
       message.success({ message: "Dados do evento salvos com sucesso!" });
       setIsEditing(false);
     } catch (error) {
@@ -113,7 +116,9 @@ export default function AdminEvento({
       updateCurrentEvent(updatedEvent);
       updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
     } catch (error) {
-      message.error({ message: "Erro ao excluir participante. Tente novamente." });
+      message.error({
+        message: "Erro ao excluir participante. Tente novamente.",
+      });
       console.error("Erro ao excluir participante:", error);
     }
   };
@@ -150,7 +155,8 @@ export default function AdminEvento({
   const redoSecretDraw = async () => {
     const confirmed = await message.confirm({
       title: "Refazer sorteio",
-      message: "Tem certeza que deseja refazer o sorteio? O sorteio anterior será descartado.",
+      message:
+        "Tem certeza que deseja refazer o sorteio? O sorteio anterior será descartado.",
     });
     if (!confirmed) return;
 
@@ -166,9 +172,10 @@ export default function AdminEvento({
   const removeEvent = async (eventId) => {
     const confirmed = await message.confirm({
       title: "Excluir evento",
-      message: "Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.",
+      message:
+        "Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.",
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
     try {
       await window.storage.delete(`evento:${eventId}`);
@@ -176,9 +183,11 @@ export default function AdminEvento({
       delete updatedEvents[eventId];
       updateEventList(updatedEvents);
       message.success({ message: "Evento excluído com sucesso!" });
+      return true;
     } catch (error) {
       message.error({ message: "Erro ao excluir evento. Tente novamente" });
       console.error("Erro ao excluir evento:", error);
+      return false;
     }
   };
 
@@ -208,7 +217,9 @@ export default function AdminEvento({
 
           <div className="mb-4 bg-gray-100 border-l-4 border-gray-500 p-4 rounded-lg">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-800 mb-3">Detalhes do Evento</h3>
+              <h3 className="font-semibold text-gray-800 mb-3">
+                Detalhes do Evento
+              </h3>
               {!isEditing ? (
                 <button
                   onClick={() => {
@@ -231,8 +242,10 @@ export default function AdminEvento({
                   <strong>Nome:</strong> {currentEvent.nome}
                 </p>
                 <p>
-                  <strong>Valor sugerido:</strong>{' '}
-                  {currentEvent.valorSugerido ? `R$ ${currentEvent.valorSugerido}` : '—'}
+                  <strong>Valor sugerido:</strong>{" "}
+                  {currentEvent.valorSugerido
+                    ? `R$ ${currentEvent.valorSugerido}`
+                    : "—"}
                 </p>
               </div>
             ) : (
@@ -280,9 +293,11 @@ export default function AdminEvento({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid md:grid-cols-2 gap-4 mb-6">
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-800"><strong>Código Participantes</strong></p>
+              <p className="text-sm text-gray-800">
+                <strong>Código Participantes</strong>
+              </p>
               <div className="flex items-center gap-2">
                 <p className="text-2xl font-bold text-blue-600">
                   {currentEvent.codigo}
@@ -291,14 +306,14 @@ export default function AdminEvento({
               </div>
             </div>
             <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-800"><strong>Código Admin</strong></p>
+              <p className="text-sm text-gray-800">
+                <strong>Código Admin</strong>
+              </p>
               <div className="flex items-center gap-2">
                 <p className="text-2xl font-bold text-purple-600">
                   {currentEvent.codigoAdmin}
                 </p>
-                <CopyButton
-                  text={currentEvent.codigoAdmin || ""}
-                />
+                <CopyButton text={currentEvent.codigoAdmin || ""} />
               </div>
             </div>
           </div>
@@ -330,7 +345,10 @@ export default function AdminEvento({
                       "Erro ao atualizar opção incluirFilhos:",
                       error
                     );
-                    message.error({ message: "Erro ao salvar a configuração. Tente novamente." });
+                    message.error({
+                      message:
+                        "Erro ao salvar a configuração. Tente novamente.",
+                    });
                   }
                 }}
               />
@@ -462,7 +480,7 @@ export default function AdminEvento({
                 })()}
 
                 {totalParticipants > pageSize && (
-                  <div className="flex items-center justify-between mt-4">
+                  <div className="flex flex-col md:flex-row gap-4 items-center justify-between mt-4">
                     <div className="text-sm text-gray-600">
                       Mostrando{" "}
                       {Math.min(
@@ -558,8 +576,8 @@ export default function AdminEvento({
           <div className="mt-4">
             <button
               onClick={async () => {
-                await removeEvent(currentEvent.codigo);
-                setView("home");
+                const deleted = await removeEvent(currentEvent.codigo);
+                if (deleted) setView("home");
               }}
               className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"
             >

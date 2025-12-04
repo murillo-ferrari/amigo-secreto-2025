@@ -166,17 +166,31 @@ export default function EventParticipant({
     );
   };
 
-  const saveEventToStorage = async (updatedEvent, newParticipantPhone = null) => {
-    await window.storage.set(
-      `evento:${currentEvent.codigo}`,
-      JSON.stringify(updatedEvent)
-    );
-    
-    // Create phone index for new participant (for phone lookup feature)
-    if (newParticipantPhone && window.storage.setPhoneIndex) {
-      await window.storage.setPhoneIndex(newParticipantPhone, currentEvent.codigo);
+  const saveEventToStorage = async (updatedEvent, newParticipantPhone = null, oldParticipantPhone = null) => {
+    // Write only the participantes subtree to respect DB rules that prevent
+    // arbitrary writes to the whole event root from the client.
+    if (window.storage && window.storage.set) {
+      await window.storage.set(
+        `evento:${currentEvent.codigo}/participantes`,
+        JSON.stringify(updatedEvent.participantes || [])
+      );
     }
-    
+
+    // Update phone index: remove old mapping (if phone changed) then set new mapping
+    try {
+      if (oldParticipantPhone && window.storage.removePhoneIndex) {
+        await window.storage.removePhoneIndex(oldParticipantPhone, currentEvent.codigo);
+      }
+
+      if (newParticipantPhone && window.storage.setPhoneIndex) {
+        await window.storage.setPhoneIndex(newParticipantPhone, currentEvent.codigo);
+      }
+    } catch (e) {
+      // Phone index update is best-effort; do not block primary flow
+      console.warn("Erro ao atualizar índice de telefone:", e);
+    }
+
+    // Update local state to reflect the change (we keep the in-memory event object)
     updateCurrentEvent(updatedEvent);
     updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
   };
@@ -222,8 +236,19 @@ export default function EventParticipant({
     }
 
     try {
-      // Pass phone number for new participants to create phone index
-      await saveEventToStorage(updatedEvent, isNewParticipant ? participantPhone.trim() : null);
+      // Determine phone index changes for updates
+      if (isNewParticipant) {
+        await saveEventToStorage(updatedEvent, participantPhone.trim(), null);
+      } else {
+        const oldPhone = existingParticipant?.celular || null;
+        const newPhone = participantPhone.trim();
+        if (oldPhone && oldPhone !== newPhone) {
+          await saveEventToStorage(updatedEvent, newPhone, oldPhone);
+        } else {
+          await saveEventToStorage(updatedEvent, null, null);
+        }
+      }
+
       showSuccessMessage(!!existingParticipant, accessCode);
     } catch (error) {
       message.error({ message: "Erro ao cadastrar. Tente novamente." });
