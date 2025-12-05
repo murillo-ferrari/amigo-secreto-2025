@@ -338,6 +338,21 @@ const confirmPhoneCode = async (code) => {
       console.warn("Failed to write phoneAuthSessions mapping:", err);
     }
 
+    // Save verified phone to sessionStorage for session-based caching
+    try {
+      if (lastPhoneNumber && typeof sessionStorage !== "undefined") {
+        const verifiedPhones = JSON.parse(sessionStorage.getItem("verifiedPhones") || "[]");
+        const normalizedPhone = normalizePhone(lastPhoneNumber);
+        if (!verifiedPhones.includes(normalizedPhone)) {
+          verifiedPhones.push(normalizedPhone);
+          sessionStorage.setItem("verifiedPhones", JSON.stringify(verifiedPhones));
+        }
+        console.log("Phone verified and cached in session:", normalizedPhone);
+      }
+    } catch (err) {
+      console.warn("Failed to save verified phone to sessionStorage:", err);
+    }
+
     // clear temporary state
     lastConfirmationResult = null;
     lastPhoneNumber = null;
@@ -346,6 +361,36 @@ const confirmPhoneCode = async (code) => {
   } catch (error) {
     console.error("confirmPhoneCode error:", error);
     throw error;
+  }
+};
+
+/**
+ * Check if a phone number has been verified in the current session.
+ * @param {string} phone - Phone number to check
+ * @returns {boolean} - True if phone was verified in this session
+ */
+const isPhoneVerifiedInSession = (phone) => {
+  try {
+    if (typeof sessionStorage === "undefined") return false;
+    const verifiedPhones = JSON.parse(sessionStorage.getItem("verifiedPhones") || "[]");
+    const normalizedPhone = normalizePhone(phone);
+    return verifiedPhones.includes(normalizedPhone);
+  } catch (err) {
+    console.warn("Error checking session verification:", err);
+    return false;
+  }
+};
+
+/**
+ * Clear all verified phones from session (useful for logout/testing).
+ */
+const clearVerifiedPhonesSession = () => {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("verifiedPhones");
+    }
+  } catch (err) {
+    console.warn("Error clearing verified phones session:", err);
   }
 };
 
@@ -504,6 +549,8 @@ const firebaseStorage = {
   sendPhoneVerification,
   confirmPhoneCode,
   isPhoneAuthAvailable,
+  isPhoneVerifiedInSession,
+  clearVerifiedPhonesSession,
   // Expose auth state change listener
   onAuthStateChanged: (cb) => (auth ? onAuthStateChanged(auth, cb) : null),
 

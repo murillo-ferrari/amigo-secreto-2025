@@ -46,21 +46,41 @@ export default function EventAccessCode({
   };
 
   const handleStartSmsVerification = async () => {
+    console.log("=== handleStartSmsVerification started ===");
+    console.log("phoneNumber:", phoneNumber);
+
     // Validate phone
     const valid = verifyMobileNumber(phoneNumber);
     if (!valid.isValid) {
+      console.log("Phone validation failed:", valid.errorMessage);
       setError(valid.errorMessage);
       if (message?.error) message.error({ message: valid.errorMessage });
       return;
     }
 
     setError("");
-    setStep("sending");
     setInternalLoading(true);
 
+    // Check if this phone was already verified in the current session
+    const isVerifiedInSession = firebase?.isPhoneVerifiedInSession && firebase.isPhoneVerifiedInSession(phoneNumber);
+    console.log("isPhoneVerifiedInSession:", isVerifiedInSession);
+
+    if (isVerifiedInSession) {
+      console.log("Phone already verified in session, skipping SMS verification");
+      setStep("searching");
+      await performSearch();
+      return;
+    }
+
+    console.log("Phone NOT in session cache, proceeding with SMS verification...");
+    setStep("sending");
+
     try {
+      console.log("firebase?.sendPhoneVerification exists:", !!firebase?.sendPhoneVerification);
       if (firebase?.sendPhoneVerification) {
+        console.log("Calling sendPhoneVerification...");
         await firebase.sendPhoneVerification(phoneNumber);
+        console.log("SMS sent successfully, showing code input");
         setStep("code");
       } else {
         // Phone Auth not available - skip verification and go directly to search
@@ -97,6 +117,8 @@ export default function EventAccessCode({
           "Autenticação por telefone não está habilitada. Habilite no Firebase Console.",
         "auth/invalid-phone-number":
           "Número de telefone inválido. Verifique o formato.",
+        "auth/captcha-check-failed":
+          "Falha na verificação do reCAPTCHA. Se você está usando um número de teste, verifique se ele está configurado no Firebase Console.",
       };
 
       if (configErrors[errorCode] || errorMsg.includes("reCAPTCHA")) {

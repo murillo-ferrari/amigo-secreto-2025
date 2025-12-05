@@ -4,16 +4,21 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import EventAccessCode from "./EventAccessCode";
 import { useFirebase } from "../../context/FirebaseContext";
+import { useEvent } from "../../context/EventContext";
 
-export default function Home({
-  setView,
-  codigoAcesso: eventAccessCode,
-  setCodigoAcesso: updateEventAccessCode,
-  recuperarPorCelular: retrieveCodeByPhone,
-  recuperarEventoPorCelular,
-  loading,
-  verified,
-}) {
+export default function Home() {
+  // Get all state from context instead of props
+  const {
+    setView,
+    accessCode: eventAccessCode,
+    setAccessCode: updateEventAccessCode,
+    retrieveParticipantByPhone: retrieveCodeByPhone,
+    recoverParticipantInEvent: recuperarEventoPorCelular,
+    loading,
+    currentUid,
+  } = useEvent();
+
+  const verified = !!currentUid;
   const [triggerAccess, setTriggerAccess] = useState(false);
   const firebase = useFirebase();
 

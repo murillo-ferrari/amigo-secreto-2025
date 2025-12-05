@@ -14,25 +14,29 @@ import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import QRCodeCard from "./QRCode";
 import firebaseStorage from "../../firebase";
+import { useEvent } from "../../context/EventContext";
 
-export default function EventParticipant({
-  eventoAtual: currentEvent,
-  setEventoAtual: updateCurrentEvent,
-  eventos: eventList,
-  setEventos: updateEventList,
-  setView: updateView,
-  nomeParticipante: participantName,
-  setNomeParticipante: updateParticipantName,
-  celular: participantPhone,
-  setCelular: updateParticipantPhone,
-  filhos: participantsChildren,
-  setFilhos: updateParticipantsChildren,
-  presentes: gifts,
-  setPresentes: updateGifts,
-  pendingAdminEvent,
-  setPendingAdminEvent,
-  accessedViaParticipantCode,
-}) {
+export default function EventParticipant() {
+  // Get all state from context instead of props
+  const {
+    currentEvent,
+    setCurrentEvent: updateCurrentEvent,
+    eventList,
+    setEventList: updateEventList,
+    setView: updateView,
+    participantName,
+    setParticipantName: updateParticipantName,
+    participantMobileNumber: participantPhone,
+    setParticipantMobileNumber: updateParticipantPhone,
+    participantChildren: participantsChildren,
+    setParticipantChildren: updateParticipantsChildren,
+    gifts,
+    setGifts: updateGifts,
+    pendingAdminEvent,
+    setPendingAdminEvent,
+    accessedViaParticipantCode,
+  } = useEvent();
+
   const [newGift, updateNewGift] = useState("");
   const [childrenNewGift, updateChildrenGift] = useState({});
   const [childName, updateChildName] = useState("");

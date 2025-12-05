@@ -8,15 +8,19 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import firebaseStorage from "../../firebase";
+import { useEvent } from "../../context/EventContext";
 
-export default function AdminEvento({
-  eventoAtual: currentEvent,
-  setEventoAtual: updateCurrentEvent,
-  eventos: eventList,
-  setEventos: updateEventList,
-  setView,
-  loading,
-}) {
+export default function AdminEvento() {
+  // Get all state from context instead of props
+  const {
+    currentEvent,
+    setCurrentEvent: updateCurrentEvent,
+    eventList,
+    setEventList: updateEventList,
+    setView,
+    loading,
+  } = useEvent();
+
   const [page, setPage] = useState(1);
   const message = useMessage();
   const pageSize = 5;

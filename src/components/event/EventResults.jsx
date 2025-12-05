@@ -2,22 +2,26 @@
 import CopyButton from "../common/CopyButton";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
+import { useEvent } from "../../context/EventContext";
 
-export default function secretSantaResults({
-  eventoAtual: currentEvent,
-  setView,
-  setEventoAtual: updateCurrentEvent,
-  setCodigoAcesso: updateAccessCode,
-}) {
-  const currentParticipant = currentEvent.participanteAtual;
+export default function SecretSantaResults() {
+  // Get all state from context instead of props
+  const {
+    currentEvent,
+    setView,
+    setCurrentEvent: updateCurrentEvent,
+    setAccessCode: updateAccessCode,
+  } = useEvent();
+
+  const currentParticipant = currentEvent?.participanteAtual;
   const participantAccessCode = currentParticipant?.codigoAcesso || "";
   const eventSuccessMessage =
-    currentEvent.successMessage ||
+    currentEvent?.successMessage ||
     (currentParticipant ? "Seu código de acesso" : null);
 
   // Find the participant corresponding to the drawn friend to display suggestions
   const getParticipantByName = (name) => {
-    const eventParticipants = currentEvent.participantes || [];
+    const eventParticipants = currentEvent?.participantes || [];
     for (const participant of eventParticipants) {
       if (participant.nome === name) return participant;
       if (participant.filhos) {
@@ -43,7 +47,7 @@ export default function secretSantaResults({
   };
 
   const normalizedFriendName = currentParticipant
-    ? normalizeName(currentEvent.sorteio[currentParticipant.nome])
+    ? normalizeName(currentEvent?.sorteio?.[currentParticipant.nome])
     : null;
   const friendObject = normalizedFriendName
     ? getParticipantByName(normalizedFriendName)
@@ -118,8 +122,8 @@ export default function secretSantaResults({
                   typeof filho === "string"
                     ? filho
                     : filho && filho.nome
-                    ? filho.nome
-                    : String(filho);
+                      ? filho.nome
+                      : String(filho);
                 const childFriendName = normalizeName(
                   currentEvent.sorteio[childName]
                 );

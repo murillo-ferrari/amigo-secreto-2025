@@ -4,14 +4,18 @@ import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import firebaseStorage from "../../firebase";
+import { useEvent } from "../../context/EventContext";
 
-export default function CriarEvento({
-  setView,
-  eventos: eventList,
-  setEventos: updateEventList,
-  setEventoAtual: updateCurrentEvent,
-  setPendingAdminEvent,
-}) {
+export default function CriarEvento() {
+  // Get all state from context instead of props
+  const {
+    setView,
+    eventList,
+    setEventList: updateEventList,
+    setCurrentEvent: updateCurrentEvent,
+    setPendingAdminEvent,
+  } = useEvent();
+
   const [eventName, setEventName] = useState("");
   const [suggestedValue, setSuggestedValue] = useState("");
   const [createdEvent, setCreatedEvent] = useState(null);

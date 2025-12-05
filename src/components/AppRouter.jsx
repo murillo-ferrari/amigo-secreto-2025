@@ -7,35 +7,7 @@ import EventParticipant from "./event/EventParticipant";
 import SecretSantaResults from "./event/EventResults";
 
 export default function AppRouter() {
-    const {
-        view,
-        setView,
-        storageError,
-        setStorageError,
-        accessCode,
-        setAccessCode,
-        fetchEventByCode,
-        retrieveParticipantByPhone,
-        recoverParticipantInEvent,
-        loading,
-        currentUid,
-        eventList,
-        setEventList,
-        currentEvent,
-        setCurrentEvent,
-        pendingAdminEvent,
-        setPendingAdminEvent,
-        participantName,
-        setParticipantName,
-        participantMobileNumber,
-        setParticipantMobileNumber,
-        participantChildren,
-        setParticipantChildren,
-        gifts,
-        setGifts,
-        accessedViaParticipantCode,
-        setAccessedViaParticipantCode
-    } = useEvent();
+    const { view, storageError, setStorageError } = useEvent();
 
     if (storageError) {
         return (
@@ -51,83 +23,16 @@ export default function AppRouter() {
 
     switch (view) {
         case "home":
-            return (
-                <Home
-                    setView={setView}
-                    codigoAcesso={accessCode}
-                    setCodigoAcesso={setAccessCode}
-                    acessarEvento={fetchEventByCode}
-                    recuperarPorCelular={retrieveParticipantByPhone}
-                    recuperarEventoPorCelular={recoverParticipantInEvent}
-                    loading={loading}
-                    verified={!!currentUid}
-                />
-            );
+            return <Home />;
         case "criar":
-            return (
-                <CriarEvento
-                    setView={setView}
-                    eventos={eventList}
-                    setEventos={setEventList}
-                    setEventoAtual={setCurrentEvent}
-                    setPendingAdminEvent={setPendingAdminEvent}
-                />
-            );
+            return <CriarEvento />;
         case "evento":
-            return (
-                <EventParticipant
-                    eventoAtual={currentEvent}
-                    setEventoAtual={setCurrentEvent}
-                    eventos={eventList}
-                    setEventos={setEventList}
-                    setView={setView}
-                    nomeParticipante={participantName}
-                    setNomeParticipante={setParticipantName}
-                    celular={participantMobileNumber}
-                    setCelular={setParticipantMobileNumber}
-                    filhos={participantChildren}
-                    setFilhos={setParticipantChildren}
-                    presentes={gifts}
-                    setPresentes={setGifts}
-                    loading={loading}
-                    pendingAdminEvent={pendingAdminEvent}
-                    setPendingAdminEvent={setPendingAdminEvent}
-                    accessedViaParticipantCode={accessedViaParticipantCode}
-                    setAccessedViaParticipantCode={setAccessedViaParticipantCode}
-                />
-            );
+            return <EventParticipant />;
         case "admin":
-            return (
-                <AdminEvento
-                    eventoAtual={currentEvent}
-                    setEventoAtual={setCurrentEvent}
-                    eventos={eventList}
-                    setEventos={setEventList}
-                    setView={setView}
-                    loading={loading}
-                />
-            );
+            return <AdminEvento />;
         case "resultado":
-            return (
-                <SecretSantaResults
-                    eventoAtual={currentEvent}
-                    setView={setView}
-                    setEventoAtual={setCurrentEvent}
-                    setCodigoAcesso={setAccessCode}
-                />
-            );
+            return <SecretSantaResults />;
         default:
-            return (
-                <Home
-                    setView={setView}
-                    codigoAcesso={accessCode}
-                    setCodigoAcesso={setAccessCode}
-                    acessarEvento={fetchEventByCode}
-                    recuperarPorCelular={retrieveParticipantByPhone}
-                    recuperarEventoPorCelular={recoverParticipantInEvent}
-                    loading={loading}
-                    verified={!!currentUid}
-                />
-            );
+            return <Home />;
     }
 }
