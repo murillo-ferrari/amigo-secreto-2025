@@ -62,7 +62,7 @@ export default function EventAccessCode({
     setInternalLoading(true);
 
     // Check if this phone was already verified in the current session
-    const isVerifiedInSession = firebase?.isPhoneVerifiedInSession && firebase.isPhoneVerifiedInSession(phoneNumber);
+    const isVerifiedInSession = firebase?.isPhoneVerifiedInSession && await firebase.isPhoneVerifiedInSession(phoneNumber);
     console.log("isPhoneVerifiedInSession:", isVerifiedInSession);
 
     if (isVerifiedInSession) {

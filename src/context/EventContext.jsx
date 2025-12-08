@@ -217,7 +217,7 @@ export const EventProvider = ({ children }) => {
 
             const participantsList = foundEvent.participantes || [];
             const participant = participantsList.find((p) =>
-                eventService.matchesPhoneNumber(p.celular, cleanedMobileNumber)
+                eventService.matchesPhoneNumber(p, cleanedMobileNumber)
             );
 
             if (!participant) {

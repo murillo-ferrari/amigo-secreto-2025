@@ -6,6 +6,9 @@ import {
   formatMobileNumber,
   verifyMobileNumber,
   normalizeAccessCode,
+  obfuscatePhone,
+  deobfuscatePhone,
+  isObfuscated,
 } from "../../utils/helpers";
 import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
@@ -142,11 +145,24 @@ export default function EventParticipant() {
   };
 
   const findExistingParticipant = () => {
-    return eventParticipants.find(
-      (p) =>
-        p.nome === participantName.trim() ||
-        p.celular === participantPhone.trim()
-    );
+    const inputPhoneDigits = (participantPhone || "").replace(/\D/g, "");
+    return eventParticipants.find((p) => {
+      // Check name match
+      if (p.nome === participantName.trim()) return true;
+      
+      // Check phone match - compare digits
+      // If celular is obfuscated, try to deobfuscate first
+      let pPhoneDigits;
+      if (isObfuscated(p.celular)) {
+        const key = (currentEvent?.codigo || "") + p.id;
+        const deobfuscated = deobfuscatePhone(p.celular, key);
+        pPhoneDigits = deobfuscated.replace(/\D/g, "");
+      } else {
+        pPhoneDigits = (p.celular || "").replace(/\D/g, "");
+      }
+      
+      return pPhoneDigits === inputPhoneDigits;
+    });
   };
 
   const normalizeChildren = () => {
@@ -156,11 +172,17 @@ export default function EventParticipant() {
   const createNewParticipant = () => {
     const phoneDigits = (participantPhone || "").replace(/\D/g, "");
     const codeToUse = phoneDigits && phoneDigits.length >= 10 ? phoneDigits : createUniqueCode();
+    const participantId = createUniqueCode();
+
+    // Obfuscate phone for storage - use eventCode + participantId as key
+    const obfuscationKey = (currentEvent?.codigo || "") + participantId;
+    const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
 
     const base = {
-      id: createUniqueCode(),
+      id: participantId,
       nome: participantName.trim(),
-      celular: participantPhone.trim(),
+      celular: obfuscatedPhone,
+      celularHash: phoneDigits, // Store hash for lookups (will be hashed in index)
       filhos: includeChildren ? normalizeChildren() : [],
       presentes: [...gifts],
       codigoAcesso: codeToUse,
@@ -179,17 +201,23 @@ export default function EventParticipant() {
   };
 
   const updateExistingParticipant = (existingParticipant) => {
-    return eventParticipants.map((p) =>
-      p.id === existingParticipant.id
-        ? {
-          ...p,
-          nome: participantName.trim(),
-          celular: participantPhone.trim(),
-          filhos: includeChildren ? normalizeChildren() : [],
-          presentes: [...gifts],
-        }
-        : p
-    );
+    const phoneDigits = (participantPhone || "").replace(/\D/g, "");
+    return eventParticipants.map((p) => {
+      if (p.id !== existingParticipant.id) return p;
+      
+      // Obfuscate phone for storage
+      const obfuscationKey = (currentEvent?.codigo || "") + p.id;
+      const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
+      
+      return {
+        ...p,
+        nome: participantName.trim(),
+        celular: obfuscatedPhone,
+        celularHash: phoneDigits,
+        filhos: includeChildren ? normalizeChildren() : [],
+        presentes: [...gifts],
+      };
+    });
   };
 
   const saveEventToStorage = async (
@@ -369,9 +397,19 @@ export default function EventParticipant() {
 
         await saveEventToStorage(updatedEvent, newPhone, null);
       } else {
-        const oldPhone = existingParticipant?.celular || null;
+        // Get old phone - need to deobfuscate if stored obfuscated
+        let oldPhone = existingParticipant?.celular || null;
+        if (oldPhone && isObfuscated(oldPhone)) {
+          const key = (currentEvent?.codigo || "") + existingParticipant.id;
+          oldPhone = deobfuscatePhone(oldPhone, key);
+        }
+        
         const newPhone = participantPhone.trim();
-        if (oldPhone && oldPhone !== newPhone) {
+        const oldPhoneDigits = (oldPhone || "").replace(/\D/g, "");
+        const newPhoneDigits = (newPhone || "").replace(/\D/g, "");
+        
+        if (oldPhoneDigits && oldPhoneDigits !== newPhoneDigits) {
+          // Phone changed - update index with old (deobfuscated) and new phone
           await saveEventToStorage(updatedEvent, newPhone, oldPhone);
         } else {
           await saveEventToStorage(updatedEvent, null, null);

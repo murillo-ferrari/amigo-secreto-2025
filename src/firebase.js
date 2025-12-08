@@ -2,11 +2,11 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   onAuthStateChanged,
-  signInAnonymously,
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
+import { hashPhone, obfuscatePhone, deobfuscatePhone, maskPhone, isObfuscated } from "./utils/crypto.js";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -28,7 +28,7 @@ let authReadyPromise = null;
 // Enable test mode for Phone Auth in development
 // This allows using test phone numbers without real reCAPTCHA verification
 const PHONE_AUTH_TEST_MODE =
-  import.meta.env.VITE_PHONE_AUTH_TEST_MODE;
+  import.meta.env.DEV || import.meta.env.VITE_PHONE_AUTH_TEST_MODE === "true";
 
 try {
   const app = initializeApp(firebaseConfig);
@@ -37,52 +37,38 @@ try {
 
   // Enable test mode for Phone Auth if in development
   // This is required when using test phone numbers configured in Firebase Console
-  /* if (PHONE_AUTH_TEST_MODE && auth) {
+  if (PHONE_AUTH_TEST_MODE && auth) {
     try {
       // @ts-ignore - This property exists but may not be in types
       auth.settings.appVerificationDisabledForTesting = true;
-      console.log(
+      /* console.log(
         "Phone Auth: Test mode enabled (appVerificationDisabledForTesting = true)"
-      );
+      ); */
     } catch (error) {
       console.warn("Could not enable Phone Auth test mode:", error);
     }
-  } */
+  }
 
-  // Creates a promise that resolves when authentication is ready
-  authReadyPromise = new Promise((resolve, reject) => {
-    // Attempts anonymous authentication
-    signInAnonymously(auth)
-      .then(() => {
-        // console.log("Firebase: Autenticado anonimamente");
-        authReady = true;
-        resolve(true);
-      })
-      .catch((error) => {
-        console.error("Firebase: Erro na autenticação anônima:", error);
-
-        // Clear message if anonymous auth is disabled
-        if (error.code === "auth/configuration-not-found") {
-          const helpError = new Error(
-            "Autenticação anônima não está habilitada no Firebase."
-          );
-          helpError.originalError = error;
-          initError = helpError;
-          reject(helpError);
-        } else {
-          initError = error;
-          reject(error);
-        }
-      });
-
-    // Also listen for auth state changes
-    onAuthStateChanged(auth, (user) => {
+  // Creates a promise that resolves when auth is initialized
+  // No anonymous auth - we use phone auth for verified users,
+  // and database rules allow public reads for events
+  authReadyPromise = new Promise((resolve) => {
+    // Listen for auth state changes (will fire when phone auth succeeds)
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // console.log("Firebase: Usuário autenticado:", user.uid);
         authReady = true;
         resolve(true);
       }
     });
+
+    // Also resolve immediately for unauthenticated reads
+    // (database rules must allow public reads for eventos)
+    setTimeout(() => {
+      if (!authReady) {
+        authReady = true;
+        resolve(true);
+      }
+    }, 100);
   });
 } catch (err) {
   console.error("Firebase initialization error:", err);
@@ -356,38 +342,22 @@ const confirmPhoneCode = async (code) => {
     const userCredential = await lastConfirmationResult.confirm(code);
     const uid = userCredential.user?.uid || null;
 
-    // Create a short-lived session mapping: phoneAuthSessions/{uid} -> { phone, createdAt, expiresAt }
-    try {
-      if (uid && database && lastPhoneNumber) {
-        const sessionPath = `phoneAuthSessions/${uid}`;
-        const dbRef = ref(database, sessionPath);
-        const now = Date.now();
-        const expires = now + 1000 * 60 * 60; // 1 hour
-        await set(dbRef, {
-          phone: lastPhoneNumber,
-          createdAt: now,
-          expiresAt: expires,
-        });
-      }
-    } catch (err) {
-      console.warn("Failed to write phoneAuthSessions mapping:", err);
-    }
-
-    // Save verified phone to sessionStorage for session-based caching
+    // Save verified phone hash to sessionStorage for session-based caching
     try {
       if (lastPhoneNumber && typeof sessionStorage !== "undefined") {
         const verifiedPhones = JSON.parse(
           sessionStorage.getItem("verifiedPhones") || "[]"
         );
         const normalizedPhone = normalizePhone(lastPhoneNumber);
-        if (!verifiedPhones.includes(normalizedPhone)) {
-          verifiedPhones.push(normalizedPhone);
+        const phoneHash = await hashPhone(normalizedPhone);
+        if (phoneHash && !verifiedPhones.includes(phoneHash)) {
+          verifiedPhones.push(phoneHash);
           sessionStorage.setItem(
             "verifiedPhones",
             JSON.stringify(verifiedPhones)
           );
         }
-        console.log("Phone verified and cached in session:", normalizedPhone);
+        console.log("Phone verified and cached in session (hashed)");
       }
     } catch (err) {
       console.warn("Failed to save verified phone to sessionStorage:", err);
@@ -407,16 +377,17 @@ const confirmPhoneCode = async (code) => {
 /**
  * Check if a phone number has been verified in the current session.
  * @param {string} phone - Phone number to check
- * @returns {boolean} - True if phone was verified in this session
+ * @returns {Promise<boolean>} - True if phone was verified in this session
  */
-const isPhoneVerifiedInSession = (phone) => {
+const isPhoneVerifiedInSession = async (phone) => {
   try {
     if (typeof sessionStorage === "undefined") return false;
     const verifiedPhones = JSON.parse(
       sessionStorage.getItem("verifiedPhones") || "[]"
     );
     const normalizedPhone = normalizePhone(phone);
-    return verifiedPhones.includes(normalizedPhone);
+    const phoneHash = await hashPhone(normalizedPhone);
+    return phoneHash && verifiedPhones.includes(phoneHash);
   } catch (err) {
     console.warn("Error checking session verification:", err);
     return false;
@@ -454,25 +425,14 @@ const setPhoneIndex = async (phone, eventCode) => {
   if (!normalizedPhone || !eventCode) return;
 
   try {
-    // Debug: log auth state and path to help diagnose permission errors
-    try {
-      console.debug(
-        "setPhoneIndex: auth:",
-        auth?.currentUser ? { uid: auth.currentUser.uid } : null,
-        {
-          normalizedPhone,
-          eventCode,
-        }
-      );
-    } catch (error) {
-      console.warn("Error logging setPhoneIndex debug info:", error);
-    }
+    // Hash the phone number for privacy - never store plain phone in database keys
+    const phoneHash = await hashPhone(normalizedPhone);
+    if (!phoneHash) return;
 
-    // Store under phones/{phone}/{eventCode} so a single phone can map to multiple events
-    const phonePath = `phones/${normalizedPhone}/${eventCode}`;
+    // Store under phones/{hashedPhone}/{eventCode} so a single phone can map to multiple events
+    const phonePath = `phones/${phoneHash}/${eventCode}`;
     const dbRef = ref(database, phonePath);
     await set(dbRef, { updatedAt: Date.now() });
-    // console.log(`Phone index entry created: ${normalizedPhone} -> ${eventCode}`);
   } catch (error) {
     console.warn("Error creating phone index:", error);
     // Non-critical error - don't throw
@@ -487,12 +447,15 @@ const removePhoneIndex = async (phone, eventCode = null) => {
   if (!normalizedPhone) return;
 
   try {
+    // Hash the phone to match the stored key
+    const phoneHash = await hashPhone(normalizedPhone);
+    if (!phoneHash) return;
+
     const phonePath = eventCode
-      ? `phones/${normalizedPhone}/${eventCode}`
-      : `phones/${normalizedPhone}`;
+      ? `phones/${phoneHash}/${eventCode}`
+      : `phones/${phoneHash}`;
     const dbRef = ref(database, phonePath);
     await remove(dbRef);
-    // console.log(`Phone index removed: ${normalizedPhone}${eventCode ? ' -> ' + eventCode : ''}`);
   } catch (error) {
     console.warn("Error removing phone index:", error);
     // Non-critical error - don't throw
@@ -508,7 +471,11 @@ const getEventCodeByPhone = async (phone) => {
   if (!normalizedPhone) return null;
 
   try {
-    const phonePath = `phones/${normalizedPhone}`;
+    // Hash the phone to look up the stored key
+    const phoneHash = await hashPhone(normalizedPhone);
+    if (!phoneHash) return null;
+
+    const phonePath = `phones/${phoneHash}`;
     const dbRef = ref(database, phonePath);
     const snapshot = await get(dbRef);
 
@@ -540,7 +507,11 @@ const getEventCodesByPhone = async (phone) => {
   if (!normalizedPhone) return [];
 
   try {
-    const phonePath = `phones/${normalizedPhone}`;
+    // Hash the phone to look up the stored key
+    const phoneHash = await hashPhone(normalizedPhone);
+    if (!phoneHash) return [];
+
+    const phonePath = `phones/${phoneHash}`;
     const dbRef = ref(database, phonePath);
     const snapshot = await get(dbRef);
 
@@ -568,6 +539,14 @@ const getEventCodesByPhone = async (phone) => {
 const firebaseStorage = {
   // Exposes the auth promise for those who need to wait
   waitForAuth,
+
+  // Phone privacy utilities
+  hashPhone,
+  obfuscatePhone,
+  deobfuscatePhone,
+  maskPhone,
+  isObfuscated,
+  normalizePhone,
 
   // Phone index functions
   setPhoneIndex,

@@ -73,9 +73,36 @@ const eventService = {
   },
 
   /**
-   * Helper to check if phone matches
+   * Helper to check if phone matches.
+   * Supports both obfuscated (new) and plain (legacy) phone storage.
+   * @param {object|string} participantOrPhone - Participant object or phone string
+   * @param {string} inputPhone - Clean phone digits to match
+   * @returns {boolean}
    */
-  matchesPhoneNumber(storedPhone, inputPhone) {
+  matchesPhoneNumber(participantOrPhone, inputPhone) {
+    // If passed a participant object with celularHash, use that (fastest/most reliable)
+    if (participantOrPhone && typeof participantOrPhone === "object") {
+      const participant = participantOrPhone;
+      // celularHash stores plain digits - use it for matching
+      if (participant.celularHash) {
+        const hash = participant.celularHash;
+        return (
+          hash === inputPhone ||
+          hash.endsWith(inputPhone) ||
+          inputPhone.endsWith(hash)
+        );
+      }
+      // Fall back to celular field
+      const stored = (participant.celular || "").replace(/\D/g, "");
+      return (
+        stored === inputPhone ||
+        stored.endsWith(inputPhone) ||
+        inputPhone.endsWith(stored)
+      );
+    }
+
+    // Legacy: string phone passed directly (may be obfuscated or plain)
+    const storedPhone = participantOrPhone;
     const cleanStored = (storedPhone || "").replace(/\D/g, "");
     return (
       cleanStored === inputPhone ||
@@ -107,7 +134,7 @@ const eventService = {
             const event = JSON.parse(result.value);
             const participantsList = event.participantes || [];
             const participant = participantsList.find((participant) =>
-              this.matchesPhoneNumber(participant.celular, cleanedMobileNumber)
+              this.matchesPhoneNumber(participant, cleanedMobileNumber)
             );
 
             if (participant) {

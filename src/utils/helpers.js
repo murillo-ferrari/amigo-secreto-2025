@@ -82,3 +82,12 @@ export const normalizeAccessCode = (val) => {
   
   return `https://wa.me/${celular.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
 }; */
+
+// Re-export crypto utilities for convenience
+export {
+  hashPhone,
+  obfuscatePhone,
+  deobfuscatePhone,
+  maskPhone,
+  isObfuscated,
+} from "./crypto.js";

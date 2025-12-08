@@ -1,7 +1,7 @@
 import { Settings, Shuffle, Trash, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { performSecretSantaDraw } from "../../utils/drawEvent";
-import { calculateTotalParticipants } from "../../utils/helpers";
+import { calculateTotalParticipants, deobfuscatePhone, isObfuscated, formatMobileNumber } from "../../utils/helpers";
 import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
@@ -32,6 +32,17 @@ export default function AdminEvento() {
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
   const isDrawn = !!currentEvent?.sorteado;
   const includeChildren = currentEvent?.incluirFilhos ?? true;
+
+  // Helper to display participant phone (deobfuscate if needed)
+  const displayPhone = (participant) => {
+    if (!participant?.celular) return "";
+    if (isObfuscated(participant.celular)) {
+      const key = (currentEvent?.codigo || "") + participant.id;
+      const deobfuscated = deobfuscatePhone(participant.celular, key);
+      return formatMobileNumber(deobfuscated);
+    }
+    return participant.celular;
+  };
 
   // Editable form state for event metadata
   const [editName, setEditName] = useState(currentEvent?.nome || "");
@@ -176,14 +187,18 @@ export default function AdminEvento() {
 
       // Clean up phone index for the removed participant (best-effort)
       try {
-        const normalizePhone = (p) => (p || "").replace(/\D/g, "");
-        const phone = participantToRemove?.celular || null;
-        const phoneNorm = phone ? normalizePhone(phone) : null;
+        const normalizePhoneDigits = (p) => (p || "").replace(/\D/g, "");
+        let phone = participantToRemove?.celular || null;
+        
+        // Deobfuscate if needed
+        if (phone && isObfuscated(phone)) {
+          const key = (currentEvent?.codigo || "") + participantToRemove.id;
+          phone = deobfuscatePhone(phone, key);
+        }
+        
+        const phoneNorm = phone ? normalizePhoneDigits(phone) : null;
         if (phoneNorm && firebaseStorage.removePhoneIndex) {
           await firebaseStorage.removePhoneIndex(phoneNorm, currentEvent.codigo);
-          console.debug(
-            `Removed phone index ${phoneNorm} -> ${currentEvent.codigo}`
-          );
         }
       } catch (err) {
         console.warn(
@@ -277,18 +292,24 @@ export default function AdminEvento() {
         const event =
           currentEvent && currentEvent.codigo === eventId ? currentEvent : null;
         const participants = event ? event.participantes || [] : [];
-        const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+        const normalizePhoneDigits = (p) => (p || "").replace(/\D/g, "");
         for (const p of participants) {
           try {
-            const phone = p?.celular || null;
-            const phoneNorm = phone ? normalizePhone(phone) : null;
+            let phone = p?.celular || null;
+            
+            // Deobfuscate if needed
+            if (phone && isObfuscated(phone)) {
+              const key = (event?.codigo || eventId) + p.id;
+              phone = deobfuscatePhone(phone, key);
+            }
+            
+            const phoneNorm = phone ? normalizePhoneDigits(phone) : null;
             if (
               phoneNorm &&
               firebaseStorage &&
               firebaseStorage.removePhoneIndex
             ) {
               await firebaseStorage.removePhoneIndex(phoneNorm, eventId);
-              console.debug(`Removed phone index ${phoneNorm} -> ${eventId}`);
             }
           } catch (error) {
             console.warn(
@@ -512,7 +533,7 @@ export default function AdminEvento() {
                           <p className="font-semibold text-gray-800">
                             {p.nome}
                           </p>
-                          <p className="text-sm text-gray-600">{p.celular}</p>
+                          <p className="text-sm text-gray-600">{displayPhone(p)}</p>
                           {p.filhos && p.filhos.length > 0 && (
                             <div>
                               <p className="text-sm text-gray-500">
