@@ -122,7 +122,7 @@ export default function Home() {
           <div>
             <input
               type="text"
-              placeholder="Digite o código do evento ou celular (com DDD)"
+              placeholder="Código do evento / celular (com DDD)"
               value={eventAccessCode}
               onChange={handleInputChange}
               maxLength={15}
