@@ -47,6 +47,9 @@ export default function AdminEvento() {
   // Editable form state for event metadata
   const [editName, setEditName] = useState(currentEvent?.name || "");
   const [editValue, setEditValue] = useState(currentEvent?.suggestedValue || "");
+  const [editPlannedDrawDate, setEditPlannedDrawDate] = useState(
+    currentEvent?.plannedDrawDate ? new Date(currentEvent.plannedDrawDate).toISOString().split('T')[0] : ""
+  );
   const [isEditing, setIsEditing] = useState(false);
 
   // Helper: verify current authenticated UID is the event owner/admin creator
@@ -113,6 +116,7 @@ export default function AdminEvento() {
       ...currentEvent,
       name: nameTrim,
       suggestedValue: editValue || undefined,
+      plannedDrawDate: editPlannedDrawDate ? new Date(editPlannedDrawDate).getTime() : null,
     };
 
     const eventToStore = { ...updatedEvent };
@@ -158,6 +162,9 @@ export default function AdminEvento() {
   const cancelEdit = () => {
     setEditName(currentEvent?.name || "");
     setEditValue(currentEvent?.suggestedValue || "");
+    setEditPlannedDrawDate(
+      currentEvent?.plannedDrawDate ? new Date(currentEvent.plannedDrawDate).toISOString().split('T')[0] : ""
+    );
     setIsEditing(false);
   };
 
@@ -404,6 +411,9 @@ export default function AdminEvento() {
                   onClick={() => {
                     setEditName(currentEvent?.name || "");
                     setEditValue(currentEvent?.suggestedValue || "");
+                    setEditPlannedDrawDate(
+                      currentEvent?.plannedDrawDate ? new Date(currentEvent.plannedDrawDate).toISOString().split('T')[0] : ""
+                    );
                     setIsEditing(true);
                   }}
                   className="text-sm bg-gray-50 border px-3 py-1 rounded hover:bg-gray-100"
@@ -420,10 +430,16 @@ export default function AdminEvento() {
                 <p className="mb-1">
                   <strong>Nome:</strong> {currentEvent.name}
                 </p>
-                <p>
+                <p className="mb-1">
                   <strong>Valor sugerido:</strong>{" "}
                   {currentEvent.suggestedValue
                     ? `R$ ${currentEvent.suggestedValue}`
+                    : "—"}
+                </p>
+                <p>
+                  <strong>Data do sorteio:</strong>{" "}
+                  {currentEvent.plannedDrawDate
+                    ? new Date(currentEvent.plannedDrawDate).toLocaleDateString('pt-BR')
                     : "—"}
                 </p>
               </div>
@@ -449,6 +465,17 @@ export default function AdminEvento() {
                       type="text"
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">
+                      <strong>Data do sorteio:</strong>
+                    </label>
+                    <input
+                      type="date"
+                      value={editPlannedDrawDate}
+                      onChange={(e) => setEditPlannedDrawDate(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded"
                     />
                   </div>

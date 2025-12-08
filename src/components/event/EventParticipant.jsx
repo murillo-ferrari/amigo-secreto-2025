@@ -426,9 +426,9 @@ export default function EventParticipant() {
         }
       }
 
-        // Mark success so UI shows confirmation instead of empty inputs
-        if (createdParticipantId) updateParticipantCode(createdParticipantId);
-        showSuccessMessage(!!existingParticipant);
+      // Mark success so UI shows confirmation instead of empty inputs
+      if (createdParticipantId) updateParticipantCode(createdParticipantId);
+      showSuccessMessage(!!existingParticipant);
     } catch (error) {
       message.error({ message: "Erro ao cadastrar. Tente novamente." });
       console.error("Erro ao cadastrar participante:", error);
@@ -842,14 +842,24 @@ export default function EventParticipant() {
             {currentEvent?.name}
           </h2>
 
-          {currentEvent?.suggestedValue && (
+          {(currentEvent?.suggestedValue || currentEvent?.plannedDrawDate) && (
             <div className="mb-6 pb-6 border-b">
-              <p className="text-gray-600">
-                Valor sugerido:{" "}
-                <span className="font-bold">
-                  R$ {currentEvent.suggestedValue}
-                </span>
-              </p>
+              {currentEvent?.suggestedValue && (
+                <p className="text-gray-600">
+                  Valor sugerido:{" "}
+                  <span className="font-bold">
+                    R$ {currentEvent.suggestedValue}
+                  </span>
+                </p>
+              )}
+              {currentEvent?.plannedDrawDate && (
+                <p className="text-gray-600 mt-1">
+                  Data do sorteio:{" "}
+                  <span className="font-bold">
+                    {new Date(currentEvent.plannedDrawDate).toLocaleDateString('pt-BR')}
+                  </span>
+                </p>
+              )}
             </div>
           )}
 
@@ -876,7 +886,7 @@ export default function EventParticipant() {
               </div>
             );
           })
-          ()
+            ()
           }
           {renderEventContent()}
         </div>

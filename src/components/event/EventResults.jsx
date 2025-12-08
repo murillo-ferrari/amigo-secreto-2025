@@ -78,14 +78,24 @@ export default function SecretSantaResults() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
             {currentEvent.name}
           </h2>
-          {currentEvent.suggestedValue && (
+          {(currentEvent.suggestedValue || currentEvent.drawDate) && (
             <div className="mb-6 pb-6 border-b">
-              <p className="text-gray-600">
-                Valor sugerido:{" "}
-                <span className="font-bold">
-                  R$ {currentEvent.suggestedValue}
-                </span>
-              </p>
+              {currentEvent.suggestedValue && (
+                <p className="text-gray-600">
+                  Valor sugerido:{" "}
+                  <span className="font-bold">
+                    R$ {currentEvent.suggestedValue}
+                  </span>
+                </p>
+              )}
+              {currentEvent.drawDate && (
+                <p className="text-gray-600 mt-1">
+                  Sorteio realizado em:{" "}
+                  <span className="font-bold">
+                    {new Date(currentEvent.drawDate).toLocaleDateString('pt-BR')}
+                  </span>
+                </p>
+              )}
             </div>
           )}
 

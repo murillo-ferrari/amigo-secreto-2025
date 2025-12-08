@@ -18,6 +18,7 @@ export default function CriarEvento() {
 
   const [eventName, setEventName] = useState("");
   const [suggestedValue, setSuggestedValue] = useState("");
+  const [plannedDrawDate, setPlannedDrawDate] = useState("");
   const [createdEvent, setCreatedEvent] = useState(null);
   const [includeChildren, setIncludeChildren] = useState(true);
   const message = useMessage();
@@ -33,6 +34,7 @@ export default function CriarEvento() {
     const newEventRecord = {
       name: eventName,
       suggestedValue: suggestedValue,
+      plannedDrawDate: plannedDrawDate ? new Date(plannedDrawDate).getTime() : null,
       includeChildrenOption: includeChildren,
       code: eventUniqueCode,
       participants: [],
@@ -68,6 +70,7 @@ export default function CriarEvento() {
       updateCurrentEvent(newEventRecord); // Mantém o código em texto para a sessão atual
       setEventName("");
       setSuggestedValue("");
+      setPlannedDrawDate("");
 
       // Keep created event in state so we can show a confirmation UI
       setCreatedEvent(newEventRecord);
@@ -103,7 +106,7 @@ export default function CriarEvento() {
                   type="text"
                   placeholder="Ex: Amigo Secreto da Família 2025"
                   value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
+                  onChange={(event) => setEventName(event.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
@@ -116,7 +119,19 @@ export default function CriarEvento() {
                   type="text"
                   placeholder="Ex: 50,00"
                   value={suggestedValue}
-                  onChange={(e) => setSuggestedValue(e.target.value)}
+                  onChange={(event) => setSuggestedValue(event.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data do Sorteio (opcional)
+                </label>
+                <input
+                  type="date"
+                  value={plannedDrawDate}
+                  onChange={(event) => setPlannedDrawDate(event.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
