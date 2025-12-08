@@ -7,11 +7,11 @@ import {
   createUniqueCode,
   deobfuscatePhone,
   formatMobileNumber,
+  getPersistableEvent,
   hashPhone,
   isObfuscated,
   obfuscatePhone,
-  verifyMobileNumber,
-  getPersistableEvent
+  verifyMobileNumber
 } from "../../utils/helpers";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
@@ -312,15 +312,18 @@ export default function EventParticipant() {
     let updatedEvent;
 
     let isNewParticipant = false;
+    let createdParticipantId = null;
 
     if (existingParticipant) {
       updatedEvent = {
         ...currentEvent,
         participants: await updateExistingParticipant(existingParticipant),
       };
+      createdParticipantId = existingParticipant.id;
     } else {
       isNewParticipant = true;
       const newParticipant = await createNewParticipant();
+      createdParticipantId = newParticipant.id;
 
       // If this creation is part of the forced admin flow, mark participant as admin
       const isForcedAdmin =
@@ -396,6 +399,8 @@ export default function EventParticipant() {
           });
           updateView("admin");
           updateView("admin");
+          // Mark success so UI shows confirmation instead of empty inputs
+          updateParticipantCode(createdParticipantId);
           showSuccessMessage(false);
           return;
         }
@@ -421,7 +426,9 @@ export default function EventParticipant() {
         }
       }
 
-      showSuccessMessage(!!existingParticipant);
+        // Mark success so UI shows confirmation instead of empty inputs
+        if (createdParticipantId) updateParticipantCode(createdParticipantId);
+        showSuccessMessage(!!existingParticipant);
     } catch (error) {
       message.error({ message: "Erro ao cadastrar. Tente novamente." });
       console.error("Erro ao cadastrar participante:", error);
@@ -592,14 +599,40 @@ export default function EventParticipant() {
   };
 
   const renderSuccessCard = () => (
-    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-      <p className="text-xl text-green-800 font-semibold mb-4">
-        {successMessage}
-      </p>
-      <p className="text-green-700">
-        Agora é só aguardar o sorteio! <br />
-        Você poderá conferir seu amigo secreto usando seu celular.
-      </p>
+    <div className="space-y-6">
+      <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
+        <p className="text-xl text-green-800 font-semibold mb-4">
+          {successMessage}
+        </p>
+        <p className="text-green-700">
+          Agora é só aguardar o sorteio! <br />
+          Você poderá conferir seu amigo secreto usando o número do seu celular (com DDD).
+        </p>
+      </div>
+
+      {currentEvent && !isDrawComplete && (
+        <div className="py-4 flex justify-center">
+          <QRCodeCard
+            url={`${window.location.origin}?code=${currentEvent.code}`}
+            label="Compartilhe este evento"
+            size={200}
+            eventName={currentEvent.name}
+          />
+        </div>
+      )}
+
+      <div>
+        <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
+          Participantes: {includeChildren ? calculateTotalParticipants(eventParticipants) : eventParticipants.length}
+          {hasChildren ? ", incluindo filhos" : ""}
+        </p>
+        <div className="space-y-1">
+          {eventParticipants
+            .slice()
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
+            .map(renderParticipantListItem)}
+        </div>
+      </div>
     </div>
   );
 
