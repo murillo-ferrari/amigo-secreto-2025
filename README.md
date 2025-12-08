@@ -1,6 +1,6 @@
 # 🎁 Amigo Secreto 2025
 
-A modern, serverless Secret Santa (Amigo Secreto) web application built with React and Firebase. Create events, invite participants, register gift suggestions, and perform secure draws — all from your browser.
+A modern, serverless Secret Santa (Amigo Secreto) web application built with React and Firebase. Create events, invite participants via QR code, register gift suggestions, and perform secure draws — all from your browser.
 
 ![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-12.6-FFCA28?logo=firebase&logoColor=black)
@@ -9,18 +9,27 @@ A modern, serverless Secret Santa (Amigo Secreto) web application built with Rea
 
 ## ✨ Features
 
-- **Create Events** — Set up a Secret Santa event with a name and optional suggested gift value
-- **Unique Access Codes** — Each event generates a participant code and a separate admin code
-- **Participant Registration** — Participants join using the event code and can add:
-  - Their name and mobile number (Brazilian format)
+- **Create Events** — Set up a Secret Santa event with a name, optional suggested gift value, and configurable children inclusion
+- **Easy Access** — Event codes always start with a letter; phone numbers are auto-formatted for seamless input
+- **Participant Registration** — Participants join using the event code or their phone number and can add:
+  - Their name and mobile number (Brazilian format with auto-formatting)
   - Children (dependents without their own phone)
   - Gift suggestions for themselves and their children
 - **Smart Draw Algorithm** — Randomized assignment that:
   - Prevents self-assignment
   - Minimizes same-family pairings (when possible)
   - Supports optional inclusion/exclusion of children
-- **Secure Admin Access** — Admin codes are hashed (SHA-256) before storage; plain codes are never persisted
-- **QR Code Sharing** — Generate and download QR codes to easily share event links
+  - Prompts for confirmation when perfect pairing isn't possible
+- **Phone-Based Access** — Participants access their results using their registered phone number (no separate access codes needed)
+- **SMS Verification** — Phone authentication via Firebase for secure identity verification
+- **QR Code Sharing** — Generate and download QR codes to easily share event invitation links
+- **Admin Panel** — Event creators can:
+  - Edit event details (name, suggested value)
+  - View all participants and their draw results
+  - Perform, redo, or delete draws
+  - Remove participants (except the admin)
+  - Delete the entire event
+- **Privacy-First Design** — Phone numbers are obfuscated for storage and hashed for lookups
 - **Results View** — After the draw, participants see who they drew along with gift suggestions
 - **Responsive UI** — Mobile-first design with Tailwind CSS
 - **Offline-Resilient** — Graceful error handling when Firebase is unreachable
@@ -34,13 +43,14 @@ A modern, serverless Secret Santa (Amigo Secreto) web application built with Rea
 | Styling    | Tailwind CSS 3             |
 | Icons      | Lucide React               |
 | Database   | Firebase Realtime Database |
+| Auth       | Firebase Phone Auth (SMS)  |
 | Hosting    | Firebase Hosting           |
 
 ## 📁 Project Structure
 
 ```
 src/
-├── App.jsx                         # Main app component & navigation logic
+├── App.jsx                         # Main app component & view routing
 ├── firebase.js                     # Firebase initialization & storage adapter
 ├── components/
 │   ├── common/                     # Reusable UI components
@@ -48,17 +58,24 @@ src/
 │   │   ├── ErrorScreen.jsx         # Database/init error display
 │   │   └── Spinner.jsx             # Loading indicator
 │   ├── event/                      # Event-specific views
+│   │   ├── EventAccessCode.jsx     # SMS verification flow
 │   │   ├── EventAdmin.jsx          # Admin panel (manage participants, run draw)
 │   │   ├── EventCreate.jsx         # Create new event form
 │   │   ├── EventHome.jsx           # Landing page (create/join event)
 │   │   ├── EventParticipant.jsx    # Participant registration form
-│   │   ├── EventRecoverCode.jsx    # Code recovery helper
 │   │   ├── EventResults.jsx        # Draw results display
-│   │   └── QRCode.jsx              # QR code generation & download
-│   └── layout/                     # Layout components (Header, Footer)
+│   │   └── eventQRCode.jsx         # QR code generation & download
+│   ├── layout/                     # Layout components (Header, Footer)
+│   └── message/                    # Toast/modal message system
+├── context/
+│   ├── EventContext.jsx            # Global event state management
+│   └── FirebaseContext.jsx         # Firebase auth context
+├── services/
+│   └── eventService.js             # Event data operations
 └── utils/
+    ├── crypto.js                   # Phone obfuscation/hashing utilities
     ├── drawEvent.js                # Secret Santa draw algorithm
-    └── helpers.js                  # Utility functions (codes, validation, hashing)
+    └── helpers.js                  # Utility functions (codes, validation, formatting)
 ```
 
 ## 🛠️ Getting Started
@@ -66,7 +83,7 @@ src/
 ### Prerequisites
 
 - Node.js 18+ and npm
-- A Firebase project with Realtime Database enabled
+- A Firebase project with Realtime Database and Phone Authentication enabled
 
 ### Installation
 
@@ -87,7 +104,7 @@ src/
    ```env
    VITE_FIREBASE_API_KEY=your_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   VITE_FIREBASE_DATABASE_URL=https://your_project.firebasedatabase.app
+   VITE_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
    VITE_FIREBASE_PROJECT_ID=your_project_id
    VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
@@ -122,36 +139,59 @@ firebase deploy
 
 The `firebase.json` configuration serves the SPA from `dist/` with client-side routing enabled.
 
-## 🔒 Security Notes
+**Live URL**: https://amigo-secreto-app-bc39d.web.app
 
-- **Admin codes are hashed** using SHA-256 before being stored in the database. The plain admin code is only shown once at event creation and kept in-memory for the current session.
-- **Admin ownership** — The first participant created in an event is designated as the event admin and stored as `adminParticipantId` on the event. There is no separate admin code.
-- **Database rules** (`database.rules.json`) are currently open for development. For production, restrict access appropriately; for example you can require authenticated writes or limit which fields can be changed by clients. Example (development-friendly) rules:
-  ```json
-  {
-    "rules": {
-      "evento:$eventId": {
-        ".read": true,
-        ".write": "auth != null"
-      }
-    }
-  }
-  ```
-- Never commit `.env.local` or service account keys to version control.
+## 🔒 Security & Privacy
+
+- **Phone Number Privacy** — Phone numbers are obfuscated using a reversible encoding (for display to admin) and hashed using SHA-256 for secure lookups
+- **Admin Authorization** — Admin access is verified via:
+  - `currentParticipant.isAdmin` flag (when accessed via verified phone)
+  - `createdByUid` matching the authenticated Firebase user
+  - `adminParticipantId` ownership check
+- **Transient State** — UI-only fields like `currentParticipant` are never persisted to the database
+- **Database Rules** — Configure `database.rules.json` to restrict access appropriately for production
+- Never commit `.env.local` or service account keys to version control
 
 ## 📱 Phone Auth (SMS) Setup
 
-This project supports Firebase Phone Authentication (SMS) to verify users' phone numbers during recovery and admin-sensitive actions.
+This project uses Firebase Phone Authentication (SMS) to verify users' phone numbers.
 
-- **Enable Phone provider**: In Firebase Console → Authentication → Sign-in method → enable **Phone**.
-- **reCAPTCHA**: For web apps Firebase requires reCAPTCHA. Add your development domains (e.g. `localhost`) and production domain to the Authorized domains list in the Firebase Console. The app uses invisible reCAPTCHA by default.
-- **Test numbers**: For local development add test phone numbers in the Auth → Sign-in method → Phone → Phone numbers for testing. This avoids sending real SMS.
-- **Local dev note**: When using real phone numbers, Firebase may enforce quotas and reCAPTCHA flows. Prefer test numbers while developing.
+### Configuration Steps:
 
-How the app uses Phone Auth:
-- The home/recovery UI will send an SMS verification code to the provided number and prompt the user to enter it.
-- After successful verification the browser session will be signed in with Firebase Auth and the UID will be used to authorize admin actions.
-- The app still keeps admin ownership tied to the participant (via `createdByUid` and `adminParticipantId`) so only the verified creator can perform admin writes.
+1. **Enable Phone provider**: In Firebase Console → Authentication → Sign-in method → enable **Phone**
+2. **Authorized domains**: Add your domains (e.g., `localhost`, `your-app.web.app`) to the Authorized domains list
+3. **reCAPTCHA**: The app uses invisible reCAPTCHA automatically for web verification
+4. **Test numbers**: For development, add test phone numbers in Auth → Sign-in method → Phone → Phone numbers for testing
+
+### How Phone Auth Works:
+
+1. User enters their phone number on the home screen
+2. If the phone is registered in an event, SMS verification is triggered
+3. After entering the 6-digit code, the user is authenticated
+4. The session persists, allowing access to results and admin functions
+5. Admin actions validate the authenticated UID against the event's creator
+
+## 🔄 User Flows
+
+### Creating an Event
+1. Click "Criar Novo Evento"
+2. Enter event name and optional suggested value
+3. Configure whether to include children in the draw
+4. Click "Criar Evento" → receive event code
+5. Register yourself as the first participant (you become the admin)
+
+### Joining an Event
+1. Enter the event code OR your phone number
+2. For phone input, numbers are auto-formatted as (XX) XXXXX-XXXX
+3. Complete SMS verification if required
+4. Fill in your details and gift suggestions
+5. Wait for the admin to perform the draw
+
+### Viewing Results
+1. Enter your phone number after the draw is complete
+2. Verify via SMS
+3. See who you drew and their gift suggestions
+4. Admins can access the admin panel from the results screen
 
 ## 📜 Available Scripts
 
