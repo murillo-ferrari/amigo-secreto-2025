@@ -27,7 +27,8 @@ let authReadyPromise = null;
 
 // Enable test mode for Phone Auth in development
 // This allows using test phone numbers without real reCAPTCHA verification
-const PHONE_AUTH_TEST_MODE = import.meta.env.DEV || import.meta.env.VITE_PHONE_AUTH_TEST_MODE === "true";
+const PHONE_AUTH_TEST_MODE =
+  import.meta.env.DEV || import.meta.env.VITE_PHONE_AUTH_TEST_MODE === "true";
 
 try {
   const app = initializeApp(firebaseConfig);
@@ -40,7 +41,9 @@ try {
     try {
       // @ts-ignore - This property exists but may not be in types
       auth.settings.appVerificationDisabledForTesting = true;
-      console.log("Phone Auth: Test mode enabled (appVerificationDisabledForTesting = true)");
+      console.log(
+        "Phone Auth: Test mode enabled (appVerificationDisabledForTesting = true)"
+      );
     } catch (e) {
       console.warn("Could not enable Phone Auth test mode:", e);
     }
@@ -129,12 +132,15 @@ let recaptchaWidgetId = null;
 /**
  * Creates and renders a reCAPTCHA verifier for phone authentication.
  * Following Firebase documentation: https://firebase.google.com/docs/auth/web/phone-auth
- * 
+ *
  * @param {string} containerId - The ID of the HTML element to render reCAPTCHA in
  * @param {string} size - Either 'invisible' or 'normal'
  * @returns {Promise<RecaptchaVerifier|null>}
  */
-const createRecaptcha = async (containerId = "recaptcha-container", size = "invisible") => {
+const createRecaptcha = async (
+  containerId = "recaptcha-container",
+  size = "invisible"
+) => {
   if (typeof window === "undefined") {
     console.warn("createRecaptcha: window is undefined (SSR?)");
     return null;
@@ -158,9 +164,13 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
 
   try {
     // AGGRESSIVE CLEANUP: Reset grecaptcha widget directly if it exists
-    if (recaptchaWidgetId !== null && typeof grecaptcha !== "undefined") {
+    if (
+      recaptchaWidgetId !== null &&
+      typeof window !== "undefined" &&
+      typeof window.grecaptcha !== "undefined"
+    ) {
       try {
-        grecaptcha.reset(recaptchaWidgetId);
+        window.grecaptcha.reset(recaptchaWidgetId);
         console.log("Reset grecaptcha widget:", recaptchaWidgetId);
       } catch (e) {
         console.warn("Error resetting grecaptcha widget:", e);
@@ -200,14 +210,14 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
       containerId,
       size,
       authExists: !!auth,
-      authCurrentUser: auth?.currentUser?.uid || "none"
+      authCurrentUser: auth?.currentUser?.uid || "none",
     });
 
     // Create RecaptchaVerifier following Firebase v9+ modular API
     // Signature: new RecaptchaVerifier(auth, containerOrId, parameters)
     recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: size,
-      callback: (response) => {
+      callback: () => {
         // reCAPTCHA solved - will proceed with signInWithPhoneNumber
         console.log("reCAPTCHA solved successfully");
       },
@@ -219,7 +229,10 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
 
     // Pre-render the reCAPTCHA
     recaptchaWidgetId = await recaptchaVerifier.render();
-    console.log("reCAPTCHA rendered successfully, widget ID:", recaptchaWidgetId);
+    console.log(
+      "reCAPTCHA rendered successfully, widget ID:",
+      recaptchaWidgetId
+    );
 
     return recaptchaVerifier;
   } catch (error) {
@@ -228,7 +241,7 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
       name: error.name,
       message: error.message,
       code: error.code,
-      stack: error.stack
+      stack: error.stack,
     });
     recaptchaVerifier = null;
     recaptchaWidgetId = null;
@@ -240,9 +253,13 @@ const createRecaptcha = async (containerId = "recaptcha-container", size = "invi
  * Resets the reCAPTCHA widget. Call this after failed verification attempts.
  */
 const resetRecaptcha = () => {
-  if (recaptchaWidgetId !== null && typeof grecaptcha !== "undefined") {
+  if (
+    recaptchaWidgetId !== null &&
+    typeof window !== "undefined" &&
+    typeof window.grecaptcha !== "undefined"
+  ) {
     try {
-      grecaptcha.reset(recaptchaWidgetId);
+      window.grecaptcha.reset(recaptchaWidgetId);
     } catch (e) {
       console.warn("Error resetting reCAPTCHA:", e);
     }
@@ -251,7 +268,7 @@ const resetRecaptcha = () => {
 
 /**
  * Sends a verification code to the specified phone number.
- * 
+ *
  * @param {string} phone - Phone number (will be converted to E.164 format)
  * @returns {Promise<boolean>} - True if code was sent successfully
  */
@@ -270,13 +287,21 @@ const sendPhoneVerification = async (phone) => {
 
   // Convert to E.164 format
   let phoneE164;
+
   if (String(phone).startsWith("+")) {
     phoneE164 = phone;
-  } else if (digits.length === 10 || digits.length === 11) {
-    // Brazilian number: add +55
-    phoneE164 = `+55${digits}`;
-  } else {
-    throw new Error("Phone number must include country code or be a valid Brazilian number (10-11 digits).");
+  }
+
+  // If not already set from a provided country code, try Brazilian fallback
+  if (!phoneE164) {
+    if (digits.length === 10 || digits.length === 11) {
+      // Brazilian number: add +55
+      phoneE164 = `+55${digits}`;
+    } else {
+      throw new Error(
+        "Phone number must include country code or be a valid Brazilian number (10-11 digits)."
+      );
+    }
   }
 
   console.log("Sending verification to:", phoneE164);
@@ -296,7 +321,9 @@ const sendPhoneVerification = async (phone) => {
   await createRecaptcha();
 
   if (!recaptchaVerifier) {
-    throw new Error("Failed to create reCAPTCHA verifier. Make sure the page has a container with id 'recaptcha-container'.");
+    throw new Error(
+      "Failed to create reCAPTCHA verifier. Make sure the page has a container with id 'recaptcha-container'."
+    );
   }
 
   try {
@@ -304,7 +331,11 @@ const sendPhoneVerification = async (phone) => {
     lastPhoneNumber = digits;
 
     // Call signInWithPhoneNumber
-    lastConfirmationResult = await signInWithPhoneNumber(auth, phoneE164, recaptchaVerifier);
+    lastConfirmationResult = await signInWithPhoneNumber(
+      auth,
+      phoneE164,
+      recaptchaVerifier
+    );
     console.log("Verification code sent successfully");
     return true;
   } catch (error) {
@@ -332,7 +363,11 @@ const confirmPhoneCode = async (code) => {
         const dbRef = ref(database, sessionPath);
         const now = Date.now();
         const expires = now + 1000 * 60 * 60; // 1 hour
-        await set(dbRef, { phone: lastPhoneNumber, createdAt: now, expiresAt: expires });
+        await set(dbRef, {
+          phone: lastPhoneNumber,
+          createdAt: now,
+          expiresAt: expires,
+        });
       }
     } catch (err) {
       console.warn("Failed to write phoneAuthSessions mapping:", err);
@@ -341,11 +376,16 @@ const confirmPhoneCode = async (code) => {
     // Save verified phone to sessionStorage for session-based caching
     try {
       if (lastPhoneNumber && typeof sessionStorage !== "undefined") {
-        const verifiedPhones = JSON.parse(sessionStorage.getItem("verifiedPhones") || "[]");
+        const verifiedPhones = JSON.parse(
+          sessionStorage.getItem("verifiedPhones") || "[]"
+        );
         const normalizedPhone = normalizePhone(lastPhoneNumber);
         if (!verifiedPhones.includes(normalizedPhone)) {
           verifiedPhones.push(normalizedPhone);
-          sessionStorage.setItem("verifiedPhones", JSON.stringify(verifiedPhones));
+          sessionStorage.setItem(
+            "verifiedPhones",
+            JSON.stringify(verifiedPhones)
+          );
         }
         console.log("Phone verified and cached in session:", normalizedPhone);
       }
@@ -372,7 +412,9 @@ const confirmPhoneCode = async (code) => {
 const isPhoneVerifiedInSession = (phone) => {
   try {
     if (typeof sessionStorage === "undefined") return false;
-    const verifiedPhones = JSON.parse(sessionStorage.getItem("verifiedPhones") || "[]");
+    const verifiedPhones = JSON.parse(
+      sessionStorage.getItem("verifiedPhones") || "[]"
+    );
     const normalizedPhone = normalizePhone(phone);
     return verifiedPhones.includes(normalizedPhone);
   } catch (err) {

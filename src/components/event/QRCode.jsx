@@ -44,9 +44,19 @@ export default function QRCodeCard({
       URL.revokeObjectURL(href);
     } catch (error) {
       console.error("Erro ao baixar QR:", error);
-      if (message && message.error) message.error({ message: "Erro ao baixar QR. Tente novamente." });
-      else if (window.appMessage?.error) window.appMessage.error({ message: "Erro ao baixar QR. Tente novamente." });
-      else console.warn("Erro ao baixar QR. Tente novamente.");
+      const errPayload = { message: "Erro ao baixar QR. Tente novamente." };
+
+      if (message && message.error) {
+        message.error(errPayload);
+        return;
+      }
+
+      if (window.appMessage?.error) {
+        window.appMessage.error(errPayload);
+        return;
+      }
+
+      console.warn("Erro ao baixar QR. Tente novamente.");
     } finally {
       setDownloading(false);
     }

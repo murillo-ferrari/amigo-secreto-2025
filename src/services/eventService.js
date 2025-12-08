@@ -29,7 +29,7 @@ const eventService = {
 
   /**
    * Fetch a specific event by its code
-   * @param {string} code 
+   * @param {string} code
    */
   async getEventByCode(code) {
     const formattedCode = (code || "").toUpperCase();
@@ -48,7 +48,10 @@ const eventService = {
   findParticipantByCode(eventParticipants, formattedCode) {
     if (!formattedCode) return null;
     const normalizedInput = normalizeAccessCode(formattedCode);
-    return eventParticipants.find((p) => normalizeAccessCode(p.codigoAcesso) === normalizedInput);
+    return eventParticipants.find(
+      (participant) =>
+        normalizeAccessCode(participant.codigoAcesso) === normalizedInput
+    );
   },
 
   /**
@@ -57,8 +60,11 @@ const eventService = {
   async searchEventByParticipantCode(formattedCode, eventList) {
     for (const event of Object.values(eventList)) {
       const eventParticipants = event.participantes || [];
-      const foundParticipant = this.findParticipantByCode(eventParticipants, formattedCode);
-      
+      const foundParticipant = this.findParticipantByCode(
+        eventParticipants,
+        formattedCode
+      );
+
       if (foundParticipant) {
         return { foundEvent: event, foundParticipant };
       }
@@ -90,16 +96,18 @@ const eventService = {
     // 1. Try phone index
     if (firebaseStorage.getEventCodesByPhone) {
       try {
-        const codes = await firebaseStorage.getEventCodesByPhone(cleanedMobileNumber);
+        const codes = await firebaseStorage.getEventCodesByPhone(
+          cleanedMobileNumber
+        );
         for (const eventCode of codes) {
           try {
             const result = await firebaseStorage.get(`evento:${eventCode}`);
             if (!result) continue;
-            
+
             const event = JSON.parse(result.value);
             const participantsList = event.participantes || [];
-            const participant = participantsList.find((p) =>
-              this.matchesPhoneNumber(p.celular, cleanedMobileNumber)
+            const participant = participantsList.find((participant) =>
+              this.matchesPhoneNumber(participant.celular, cleanedMobileNumber)
             );
 
             if (participant) {
@@ -107,8 +115,12 @@ const eventService = {
             } else {
               matches.push({ event, participant: null });
             }
-          } catch (err) {
-            console.warn("Failed fetching event from index code:", eventCode, err);
+          } catch (error) {
+            console.warn(
+              "Failed fetching event from index code:",
+              eventCode,
+              error
+            );
           }
         }
       } catch (error) {
@@ -126,7 +138,7 @@ const eventService = {
     if (!event || !event.codigo) throw new Error("Evento inválido");
     await firebaseStorage.set(`evento:${event.codigo}`, JSON.stringify(event));
     return event;
-  }
+  },
 };
 
 export default eventService;

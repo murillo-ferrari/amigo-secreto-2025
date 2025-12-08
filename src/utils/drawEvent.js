@@ -12,10 +12,14 @@ export const performSecretSantaDraw = async (
 
   // Check if there are at least 2 participants (depending on includeChildren)
   let totalParticipants = 0;
-  currentEvent.participantes.forEach((p) => {
+  currentEvent.participantes.forEach((participant) => {
     totalParticipants++;
-    if (includeChildren && p.filhos && p.filhos.length > 0) {
-      totalParticipants += p.filhos.length;
+    if (
+      includeChildren &&
+      participant.filhos &&
+      participant.filhos.length > 0
+    ) {
+      totalParticipants += participant.filhos.length;
     }
   });
 
@@ -23,22 +27,41 @@ export const performSecretSantaDraw = async (
     const text = includeChildren
       ? "Precisa de pelo menos 2 participantes no total (contando filhos)!"
       : "Precisa de pelo menos 2 participantes no total!";
-    if (message?.error) message.error({ message: text });
-    else if (window.appMessage?.error) window.appMessage.error({ message: text });
-    else console.warn(text);
+    if (message?.error) {
+      message.error({ message: text });
+    }
+
+    if (!message?.error) {
+      if (window.appMessage?.error) {
+        window.appMessage.error({ message: text });
+      } else {
+        console.warn(text);
+      }
+    }
     return;
   }
 
   // Create a list of all participants (optionally including children) with their family identifier
   const participantsList = [];
-  currentEvent.participantes.forEach((p) => {
-    participantsList.push({ nome: p.nome, responsavel: p.id });
-    if (includeChildren && p.filhos && p.filhos.length > 0) {
-      p.filhos.forEach((f) => {
+  currentEvent.participantes.forEach((participant) => {
+    participantsList.push({
+      nome: participant.nome,
+      responsavel: participant.id,
+    });
+    if (
+      includeChildren &&
+      participant.filhos &&
+      participant.filhos.length > 0
+    ) {
+      participant.filhos.forEach((participantChild) => {
         // filhos may be strings or objects { nome, presentes }
         const childName =
-          typeof f === "string" ? f : f && f.nome ? f.nome : String(f);
-        participantsList.push({ nome: childName, responsavel: p.id });
+          typeof participantChild === "string"
+            ? participantChild
+            : participantChild && participantChild.nome
+            ? participantChild.nome
+            : String(participantChild);
+        participantsList.push({ nome: childName, responsavel: participant.id });
       });
     }
   });
@@ -47,14 +70,24 @@ export const performSecretSantaDraw = async (
   // console.log("Participants:", participantsList);
 
   // Check if there are at least 2 different families
-  const uniqueFamilies = new Set(participantsList.map((p) => p.responsavel));
+  const uniqueFamilies = new Set(
+    participantsList.map((participant) => participant.responsavel)
+  );
 
   if (uniqueFamilies.size < 2) {
     const text =
       "Não é possível realizar o sorteio. Todos os participantes são da mesma família! Adicione participantes de outras famílias.";
-    if (message?.error) message.error({ message: text });
-    else if (window.appMessage?.error) window.appMessage.error({ message: text });
-    else console.warn(text);
+    if (message?.error) {
+      message.error({ message: text });
+    }
+
+    if (!message?.error) {
+      if (window.appMessage?.error) {
+        window.appMessage.error({ message: text });
+      } else {
+        console.warn(text);
+      }
+    }
     return;
   }
 
@@ -87,8 +120,12 @@ export const performSecretSantaDraw = async (
         isSelfViolation = true;
         violationCount += 100;
       }
-      // Check if drew from same family
-      else if (donorParticipant.responsavel === selectedReceiver.responsavel) {
+
+      // Check if drew from same family (only when not a self-violation)
+      if (
+        donorParticipant.nome !== selectedReceiver.nome &&
+        donorParticipant.responsavel === selectedReceiver.responsavel
+      ) {
         violationCount++;
       }
     }
@@ -134,16 +171,21 @@ export const performSecretSantaDraw = async (
         confirmText: "Usar solução",
         cancelText: "Cancelar",
       });
-    } else if (window.appMessage?.confirm) {
-      userConfirmation = await window.appMessage.confirm({
-        title: "Solução parcial encontrada",
-        message: msg,
-        confirmText: "Usar solução",
-        cancelText: "Cancelar",
-      });
-    } else {
-      console.warn("Confirm required but no message system available:", msg);
-      userConfirmation = false;
+    }
+
+    // If the primary message.confirm is not available, try the global fallback.
+    if (!message?.confirm) {
+      if (window.appMessage?.confirm) {
+        userConfirmation = await window.appMessage.confirm({
+          title: "Solução parcial encontrada",
+          message: msg,
+          confirmText: "Usar solução",
+          cancelText: "Cancelar",
+        });
+      } else {
+        console.warn("Confirm required but no message system available:", msg);
+        userConfirmation = false;
+      }
     }
 
     if (userConfirmation) {
@@ -157,9 +199,17 @@ export const performSecretSantaDraw = async (
   if (!isValidDraw) {
     const text =
       "Não foi possível realizar o sorteio. Tente adicionar mais participantes de famílias diferentes.";
-    if (message?.error) message.error({ message: text });
-    else if (window.appMessage?.error) window.appMessage.error({ message: text });
-    else console.warn(text);
+    if (message?.error) {
+      message.error({ message: text });
+    }
+
+    if (!message?.error) {
+      if (window.appMessage?.error) {
+        window.appMessage.error({ message: text });
+      } else {
+        console.warn(text);
+      }
+    }
     return;
   }
 
@@ -179,13 +229,33 @@ export const performSecretSantaDraw = async (
     );
     setCurrentEvent(updatedEvent);
     setEvents({ ...events, [currentEvent.codigo]: updatedEvent });
-    if (message?.success) message.success({ message: "Sorteio realizado com sucesso!" });
-    else if (window.appMessage?.success) window.appMessage.success({ message: "Sorteio realizado com sucesso!" });
-    else console.info("Sorteio realizado com sucesso!");
+    if (message?.success) {
+      message.success({ message: "Sorteio realizado com sucesso!" });
+    }
+
+    if (!message?.success) {
+      if (window.appMessage?.success) {
+        window.appMessage.success({
+          message: "Sorteio realizado com sucesso!",
+        });
+      } else {
+        console.info("Sorteio realizado com sucesso!");
+      }
+    }
   } catch (error) {
     console.error("Erro ao salvar sorteio:", error);
-    if (message?.error) message.error({ message: "Erro ao realizar sorteio. Tente novamente." });
-    else if (window.appMessage?.error) window.appMessage.error({ message: "Erro ao realizar sorteio. Tente novamente." });
-    else console.error("Erro ao realizar sorteio. Tente novamente.");
+    if (message?.error) {
+      message.error({ message: "Erro ao realizar sorteio. Tente novamente." });
+    }
+
+    if (!message?.error) {
+      if (window.appMessage?.error) {
+        window.appMessage.error({
+          message: "Erro ao realizar sorteio. Tente novamente.",
+        });
+      } else {
+        console.error("Erro ao realizar sorteio. Tente novamente.");
+      }
+    }
   }
 };

@@ -4,21 +4,26 @@ export default function ErrorScreen({ error, onRetry }) {
   const message = error && error.message ? error.message : String(error);
 
   const suggestions = [];
-  if (/ERR_NAME_NOT_RESOLVED/i.test(message) || /ENOTFOUND/i.test(message)) {
+  const isDnsError = /ERR_NAME_NOT_RESOLVED/i.test(message) || /ENOTFOUND/i.test(message);
+  const isFirebaseUrlError = /Can't determine Firebase Database URL|FIREBASE FATAL ERROR/i.test(message);
+
+  if (isDnsError) {
     suggestions.push("Verifique sua conexão com a internet.");
     suggestions.push(
       "Confirme se o valor `VITE_FIREBASE_DATABASE_URL` está correto em `.env.local`."
     );
-  } else if (
-    /Can't determine Firebase Database URL|FIREBASE FATAL ERROR/i.test(message)
-  ) {
+  }
+
+  if (!isDnsError && isFirebaseUrlError) {
     suggestions.push(
       "Adicione `VITE_FIREBASE_PROJECT_ID` e `VITE_FIREBASE_DATABASE_URL` no arquivo `.env.local`."
     );
     suggestions.push(
       "Reinicie o servidor de desenvolvimento após editar `.env.local`."
     );
-  } else {
+  }
+
+  if (!isDnsError && !isFirebaseUrlError) {
     suggestions.push(
       "Verifique a configuração do Firebase e as variáveis de ambiente."
     );

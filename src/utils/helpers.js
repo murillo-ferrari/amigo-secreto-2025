@@ -6,22 +6,25 @@ export const createUniqueCode = () => {
 // Formats a Brazilian mobile number as (XX) XXXXX-XXXX
 export const formatMobileNumber = (valor) => {
   const cleanedValue = valor.replace(/\D/g, "");
-
   if (cleanedValue.length <= 2) {
     return cleanedValue;
-  } else if (cleanedValue.length <= 7) {
+  }
+
+  if (cleanedValue.length <= 7) {
     return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2)}`;
-  } else if (cleanedValue.length <= 11) {
-    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
-      2,
-      7
-    )}-${cleanedValue.slice(7, 11)}`;
-  } else {
+  }
+
+  if (cleanedValue.length <= 11) {
     return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
       2,
       7
     )}-${cleanedValue.slice(7, 11)}`;
   }
+
+  return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
+    2,
+    7
+  )}-${cleanedValue.slice(7, 11)}`;
 };
 
 // Validates Brazilian mobile number (must have 10 or 11 digits)
@@ -30,7 +33,10 @@ export const verifyMobileNumber = (celular) => {
 
   // Must be 10 or 11 digits long.
   if (formattedNumbers.length < 10 || formattedNumbers.length > 11) {
-    return { isValid: false, errorMessage: "Celular deve ter 10 ou 11 dígitos" };
+    return {
+      isValid: false,
+      errorMessage: "Celular deve ter 10 ou 11 dígitos",
+    };
   }
 
   // DDD must be valid (11-99)
