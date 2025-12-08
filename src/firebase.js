@@ -37,7 +37,7 @@ try {
 
   // Enable test mode for Phone Auth if in development
   // This is required when using test phone numbers configured in Firebase Console
-  if (PHONE_AUTH_TEST_MODE && auth) {
+  /* if (PHONE_AUTH_TEST_MODE && auth) {
     try {
       // @ts-ignore - This property exists but may not be in types
       auth.settings.appVerificationDisabledForTesting = true;
@@ -47,7 +47,7 @@ try {
     } catch (error) {
       console.warn("Could not enable Phone Auth test mode:", error);
     }
-  }
+  } */
 
   // Creates a promise that resolves when authentication is ready
   authReadyPromise = new Promise((resolve, reject) => {
