@@ -1,17 +1,16 @@
 import { Gift, CheckCircle } from "lucide-react";
 import firebaseStorage from "../../firebase";
 
-export default function Header({ verified = null }) {
+export default function Header({ verified = null, phone = null }) {
   let isVerified = false;
-  if (typeof verified === "boolean") isVerified = verified;
-  else {
-    try {
-      if (firebaseStorage?.getCurrentUserUid) {
-        isVerified = !!firebaseStorage.getCurrentUserUid();
-      }
-    } catch (err) {
-      isVerified = false;
-    }
+
+  if (typeof verified === "boolean") {
+    isVerified = verified;
+  }
+
+  if (!isVerified && phone) {
+    isVerified = firebaseStorage.isPhoneVerifiedInSession(phone);
+    console.log("Header: isVerified from session?", isVerified);
   }
 
   return (
@@ -21,7 +20,7 @@ export default function Header({ verified = null }) {
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Amigo Secreto</h1>
         {isVerified && (
           <span className="text-green-600 flex items-center gap-1 text-sm">
-            <CheckCircle className="w-4 h-4" /> Verified
+            <CheckCircle className="w-4 h-4" /> Verificado
           </span>
         )}
       </div>

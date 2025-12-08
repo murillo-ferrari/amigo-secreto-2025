@@ -28,7 +28,7 @@ let authReadyPromise = null;
 // Enable test mode for Phone Auth in development
 // This allows using test phone numbers without real reCAPTCHA verification
 const PHONE_AUTH_TEST_MODE =
-  import.meta.env.DEV || import.meta.env.VITE_PHONE_AUTH_TEST_MODE === "true";
+  import.meta.env.VITE_PHONE_AUTH_TEST_MODE;
 
 try {
   const app = initializeApp(firebaseConfig);
@@ -44,8 +44,8 @@ try {
       console.log(
         "Phone Auth: Test mode enabled (appVerificationDisabledForTesting = true)"
       );
-    } catch (e) {
-      console.warn("Could not enable Phone Auth test mode:", e);
+    } catch (error) {
+      console.warn("Could not enable Phone Auth test mode:", error);
     }
   }
 
