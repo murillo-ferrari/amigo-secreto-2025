@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useEvent } from "../../context/EventContext";
 import { useFirebase } from "../../context/FirebaseContext";
+import { formatMobileNumber } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import EventAccessCode from "./EventAccessCode";
@@ -57,6 +58,29 @@ export default function Home() {
     setTriggerAccess(false);
   };
 
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    const digitsOnly = value.replace(/\D/g, "");
+
+    // If the input starts with a digit OR contains digits with phone formatting (parenthesis),
+    // treat it as a phone number
+    const isPhoneInput = /^\d/.test(value) || (value.startsWith("(") && digitsOnly.length > 0);
+
+    if (isPhoneInput) {
+      // Prevent input beyond 11 digits
+      if (digitsOnly.length > 11) {
+        return;
+      }
+      updateEventAccessCode(formatMobileNumber(value));
+    } else {
+      // Otherwise, treat it as an event code - limit to 6 characters
+      if (value.length > 6) {
+        return;
+      }
+      updateEventAccessCode(value.toUpperCase());
+    }
+  };
+
   const rawInput = eventAccessCode || "";
   const digitsOnly = rawInput.replace(/\D/g, "");
   const isPhoneValid = digitsOnly.length >= 10;
@@ -100,7 +124,8 @@ export default function Home() {
               type="text"
               placeholder="Digite o código do evento ou celular (com DDD)"
               value={eventAccessCode}
-              onChange={(e) => updateEventAccessCode(e.target.value)}
+              onChange={handleInputChange}
+              maxLength={15}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
               disabled={triggerAccess}
             />

@@ -53,23 +53,49 @@ export default function AdminEvento() {
   // Helper: verify current authenticated UID is the event owner/admin creator
   const isAuthorizedAdmin = () => {
     try {
+      // Check 1: If currentParticipant is set and marked as admin (they verified via phone)
+      if (currentEvent?.currentParticipant?.isAdmin) {
+        console.log("isAuthorizedAdmin: authorized via currentParticipant.isAdmin");
+        return true;
+      }
+
       if (!firebaseStorage || !firebaseStorage.getCurrentUserUid) return false;
       const uid = firebaseStorage.getCurrentUserUid();
+
+      console.log("isAuthorizedAdmin check - current UID:", uid);
+      console.log("isAuthorizedAdmin check - event.createdByUid:", currentEvent?.createdByUid);
+
       if (!uid) return false;
 
-      // Primary ownership: event.createdByUid (set when participant created)
-      if (currentEvent?.createdByUid && currentEvent.createdByUid === uid)
+      // Check 2: Primary ownership: event.createdByUid (set when participant created)
+      if (currentEvent?.createdByUid && currentEvent.createdByUid === uid) {
+        console.log("isAuthorizedAdmin: authorized via event.createdByUid");
         return true;
+      }
 
-      // Fallback: admin participant's createdByUid
+      // Check 3: Fallback: admin participant's createdByUid
       const adminId = currentEvent?.adminParticipantId || null;
       if (adminId) {
         const adminParticipant = (currentEvent.participants || []).find(
           (p) => p.id === adminId
         );
-        if (adminParticipant && adminParticipant.createdByUid === uid) return true;
+        console.log("isAuthorizedAdmin check - adminParticipant:", adminParticipant);
+        if (adminParticipant && adminParticipant.createdByUid === uid) {
+          console.log("isAuthorizedAdmin: authorized via adminParticipant.createdByUid");
+          return true;
+        }
       }
 
+      // Check 4: Any participant with isAdmin flag and matching UID
+      const adminByFlag = (currentEvent?.participants || []).find(
+        (p) => p.isAdmin && p.createdByUid === uid
+      );
+      if (adminByFlag) {
+        console.log("isAuthorizedAdmin: authorized via participant with isAdmin flag");
+        return true;
+      }
+
+      console.log("isAuthorizedAdmin: NOT authorized");
       return false;
     } catch (error) {
       console.warn("isAuthorizedAdmin failed:", error);
@@ -239,13 +265,16 @@ export default function AdminEvento() {
       drawDate: null,
     };
 
+    // Preserve currentParticipant in state for authorization
+    const eventForState = { ...refreshedEvent };
+
     try {
       await firebaseStorage.set(
         `event:${currentEvent.code}`,
         JSON.stringify(getPersistableEvent(refreshedEvent))
       );
-      updateCurrentEvent(refreshedEvent);
-      updateEventList({ ...eventList, [currentEvent.code]: refreshedEvent });
+      updateCurrentEvent(eventForState);
+      updateEventList({ ...eventList, [currentEvent.code]: eventForState });
       message.success({ message: "Sorteio excluído com sucesso!" });
     } catch (error) {
       message.error({ message: "Erro ao excluir sorteio. Tente novamente." });

@@ -9,6 +9,8 @@ export default function SecretSantaResults() {
     setView,
     setCurrentEvent: updateCurrentEvent,
     setAccessCode: updateAccessCode,
+    accessedViaParticipantCode,
+    currentUid,
   } = useEvent();
 
   const currentParticipant = currentEvent?.currentParticipant;
@@ -87,6 +89,31 @@ export default function SecretSantaResults() {
             </div>
           )}
 
+          {/* Show admin access button when the current logged-in participant is the admin */}
+          {accessedViaParticipantCode && (() => {
+            const isAdminFromCurrentParticipant = !!(
+              currentEvent?.currentParticipant && currentEvent.currentParticipant.isAdmin
+            );
+            const isAdminFromUid = (() => {
+              if (!currentUid) return false;
+              const parts = currentEvent?.participants || [];
+              return parts.some(
+                (p) => p.isAdmin && p.createdByUid && p.createdByUid === currentUid
+              );
+            })();
+            return (isAdminFromCurrentParticipant || isAdminFromUid) && (
+              <div className="mb-6 pb-6 border-b">
+                <button
+                  onClick={() => setView("admin")}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700"
+                >
+                  Acessar Admin
+                </button>
+              </div>
+            );
+          })()
+          }
+
           <div className="space-y-4">
             <div className="text-left text-xl">
               <p>
@@ -157,8 +184,6 @@ export default function SecretSantaResults() {
                 );
               })}
           </div>
-
-          {/* Access code display removed */}
         </div>
       </div>
       <Footer />

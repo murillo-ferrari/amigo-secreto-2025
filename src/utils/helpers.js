@@ -1,30 +1,28 @@
-// Generates a unique 6-character alphanumeric code
+// Generates a unique 6-character alphanumeric code that always starts with a letter
 export const createUniqueCode = () => {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const firstChar = letters[Math.floor(Math.random() * letters.length)];
+  const remainingChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return firstChar + remainingChars;
 };
 
 // Formats a Brazilian mobile number as (XX) XXXXX-XXXX
 export const formatMobileNumber = (valor) => {
   const cleanedValue = valor.replace(/\D/g, "");
-  if (cleanedValue.length <= 2) {
-    return cleanedValue;
+  
+  // Limit to 11 digits maximum
+  const limitedValue = cleanedValue.slice(0, 11);
+  
+  if (limitedValue.length <= 2) {
+    return limitedValue;
   }
 
-  if (cleanedValue.length <= 7) {
-    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(2)}`;
+  if (limitedValue.length <= 7) {
+    return `(${limitedValue.slice(0, 2)}) ${limitedValue.slice(2)}`;
   }
 
-  if (cleanedValue.length <= 11) {
-    return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
-      2,
-      7
-    )}-${cleanedValue.slice(7, 11)}`;
-  }
-
-  return `(${cleanedValue.slice(0, 2)}) ${cleanedValue.slice(
-    2,
-    7
-  )}-${cleanedValue.slice(7, 11)}`;
+  // Only add hyphen when there are digits after position 7
+  return `(${limitedValue.slice(0, 2)}) ${limitedValue.slice(2, 7)}-${limitedValue.slice(7)}`;
 };
 
 // Validates Brazilian mobile number (must have 10 or 11 digits)

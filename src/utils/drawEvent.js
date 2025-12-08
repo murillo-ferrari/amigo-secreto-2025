@@ -1,4 +1,5 @@
 import firebaseStorage from "../firebase";
+import { getPersistableEvent } from "./helpers";
 
 export const performSecretSantaDraw = async (
   currentEvent,
@@ -217,21 +218,27 @@ export const performSecretSantaDraw = async (
 
   // Prepare event object for persistence. Ensure transient UI-only fields
   // (like `currentParticipant`) are not persisted to the DB.
-  const { _currentParticipant, ...eventWithoutTransient } = currentEvent || {};
-  const updatedEvent = {
+  const eventWithoutTransient = getPersistableEvent(currentEvent);
+  const updatedEventForDb = {
     ...eventWithoutTransient,
     drawn: true,
     draw: draw,
     drawDate: Date.now(),
   };
 
+  // For in-memory state, preserve currentParticipant so admin authorization continues to work
+  const updatedEventForState = {
+    ...updatedEventForDb,
+    currentParticipant: currentEvent.currentParticipant,
+  };
+
   try {
     await firebaseStorage.set(
       `event:${currentEvent.code}`,
-      JSON.stringify(updatedEvent)
+      JSON.stringify(updatedEventForDb)
     );
-    setCurrentEvent(updatedEvent);
-    setEvents({ ...events, [currentEvent.code]: updatedEvent });
+    setCurrentEvent(updatedEventForState);
+    setEvents({ ...events, [currentEvent.code]: updatedEventForState });
     if (message?.success) {
       message.success({ message: "Sorteio realizado com sucesso!" });
     }
