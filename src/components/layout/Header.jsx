@@ -1,5 +1,5 @@
-import { Gift, CheckCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { CheckCircle, Gift } from "lucide-react";
+import { useEffect, useState } from "react";
 import firebaseStorage from "../../firebase";
 
 export default function Header({ verified = null, phone = null }) {

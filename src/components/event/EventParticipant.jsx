@@ -1,23 +1,23 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { useEvent } from "../../context/EventContext";
+import firebaseStorage from "../../firebase";
 import {
   calculateTotalParticipants,
   createUniqueCode,
-  formatMobileNumber,
-  verifyMobileNumber,
-  normalizeAccessCode,
-  obfuscatePhone,
   deobfuscatePhone,
+  formatMobileNumber,
+  hashPhone,
   isObfuscated,
+  obfuscatePhone,
+  verifyMobileNumber,
+  getPersistableEvent
 } from "../../utils/helpers";
-import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
-import QRCodeCard from "./QRCode";
-import firebaseStorage from "../../firebase";
-import { useEvent } from "../../context/EventContext";
+import QRCodeCard from "./eventQRCode";
 
 export default function EventParticipant() {
   // Get all state from context instead of props
@@ -38,6 +38,8 @@ export default function EventParticipant() {
     pendingAdminEvent,
     setPendingAdminEvent,
     accessedViaParticipantCode,
+    setAccessedViaParticipantCode,
+    currentUid,
   } = useEvent();
 
   const [newGift, updateNewGift] = useState("");
@@ -47,12 +49,12 @@ export default function EventParticipant() {
   const [successMessage, setSuccessMessage] = useState(null);
   const [eventParticipantId, updateEventParticipantId] = useState("");
 
-  const eventParticipants = currentEvent?.participantes || [];
+  const eventParticipants = currentEvent?.participants || [];
   const message = useMessage();
-  const includeChildren = currentEvent?.incluirFilhos ?? true;
+  const includeChildren = currentEvent?.includeChildrenOption ?? true;
   const hasChildren =
-    includeChildren && eventParticipants.some((p) => p.filhos?.length > 0);
-  const isDrawComplete = currentEvent?.sorteado;
+    includeChildren && eventParticipants.some((p) => p.children?.length > 0);
+  const isDrawComplete = currentEvent?.drawn;
 
   // ===== Phone Number Handling =====
   const handleCelularChange = (e) => {
@@ -63,9 +65,9 @@ export default function EventParticipant() {
   // ===== Children Management =====
   const normalizeChild = (child) => {
     if (typeof child === "string") {
-      return { nome: child, presentes: [] };
+      return { name: child, gifts: [] };
     }
-    return { nome: child.nome, presentes: child.presentes || [] };
+    return { name: child.name, gifts: child.gifts || [] };
   };
 
   const addParticipantChild = () => {
@@ -73,7 +75,7 @@ export default function EventParticipant() {
 
     updateParticipantsChildren([
       ...participantsChildren,
-      { nome: childName.trim(), presentes: [] },
+      { name: childName.trim(), gifts: [] },
     ]);
     updateChildName("");
   };
@@ -94,7 +96,7 @@ export default function EventParticipant() {
       const normalized = normalizeChild(child);
       return {
         ...normalized,
-        presentes: [...normalized.presentes, giftValue],
+        gifts: [...normalized.gifts, giftValue],
       };
     });
 
@@ -109,7 +111,7 @@ export default function EventParticipant() {
 
       return {
         ...child,
-        presentes: (child.presentes || []).filter((_, pi) => pi !== giftIndex),
+        gifts: (child.gifts || []).filter((_, pi) => pi !== giftIndex),
       };
     });
 
@@ -148,19 +150,19 @@ export default function EventParticipant() {
     const inputPhoneDigits = (participantPhone || "").replace(/\D/g, "");
     return eventParticipants.find((p) => {
       // Check name match
-      if (p.nome === participantName.trim()) return true;
-      
+      if (p.name === participantName.trim()) return true;
+
       // Check phone match - compare digits
       // If celular is obfuscated, try to deobfuscate first
       let pPhoneDigits;
-      if (isObfuscated(p.celular)) {
-        const key = (currentEvent?.codigo || "") + p.id;
-        const deobfuscated = deobfuscatePhone(p.celular, key);
+      if (isObfuscated(p.mobilePhone)) {
+        const key = (currentEvent?.code || "") + p.id;
+        const deobfuscated = deobfuscatePhone(p.mobilePhone, key);
         pPhoneDigits = deobfuscated.replace(/\D/g, "");
       } else {
-        pPhoneDigits = (p.celular || "").replace(/\D/g, "");
+        pPhoneDigits = (p.mobilePhone || "").replace(/\D/g, "");
       }
-      
+
       return pPhoneDigits === inputPhoneDigits;
     });
   };
@@ -169,23 +171,24 @@ export default function EventParticipant() {
     return (participantsChildren || []).map(normalizeChild);
   };
 
-  const createNewParticipant = () => {
+  const createNewParticipant = async () => {
     const phoneDigits = (participantPhone || "").replace(/\D/g, "");
-    const codeToUse = phoneDigits && phoneDigits.length >= 10 ? phoneDigits : createUniqueCode();
     const participantId = createUniqueCode();
 
     // Obfuscate phone for storage - use eventCode + participantId as key
-    const obfuscationKey = (currentEvent?.codigo || "") + participantId;
+    const obfuscationKey = (currentEvent?.code || "") + participantId;
     const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
+
+    // Hash phone for lookups - one-way hash, can't be reversed
+    const phoneHash = await hashPhone(phoneDigits);
 
     const base = {
       id: participantId,
-      nome: participantName.trim(),
-      celular: obfuscatedPhone,
-      celularHash: phoneDigits, // Store hash for lookups (will be hashed in index)
-      filhos: includeChildren ? normalizeChildren() : [],
-      presentes: [...gifts],
-      codigoAcesso: codeToUse,
+      name: participantName.trim(),
+      mobilePhone: obfuscatedPhone,
+      mobilePhoneHash: phoneHash, // One-way hash for phone lookups (privacy-safe)
+      children: includeChildren ? normalizeChildren() : [],
+      gifts: [...gifts],
     };
 
     try {
@@ -193,29 +196,32 @@ export default function EventParticipant() {
         const uid = firebaseStorage.getCurrentUserUid();
         if (uid) base.createdByUid = uid;
       }
-    } catch (err) {
-      // ignore
+    } catch (error) {
+      console.warn("Could not get current user UID for participant:", error);
     }
 
     return base;
   };
 
-  const updateExistingParticipant = (existingParticipant) => {
+  const updateExistingParticipant = async (existingParticipant) => {
     const phoneDigits = (participantPhone || "").replace(/\D/g, "");
+    // Hash phone for lookups - one-way hash, can't be reversed
+    const phoneHash = await hashPhone(phoneDigits);
+
     return eventParticipants.map((p) => {
       if (p.id !== existingParticipant.id) return p;
-      
+
       // Obfuscate phone for storage
-      const obfuscationKey = (currentEvent?.codigo || "") + p.id;
+      const obfuscationKey = (currentEvent?.code || "") + p.id;
       const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
-      
+
       return {
         ...p,
-        nome: participantName.trim(),
-        celular: obfuscatedPhone,
-        celularHash: phoneDigits,
-        filhos: includeChildren ? normalizeChildren() : [],
-        presentes: [...gifts],
+        name: participantName.trim(),
+        mobilePhone: obfuscatedPhone,
+        mobilePhoneHash: phoneHash,
+        children: includeChildren ? normalizeChildren() : [],
+        gifts: [...gifts],
       };
     });
   };
@@ -229,8 +235,8 @@ export default function EventParticipant() {
     // arbitrary writes to the whole event root from the client.
     if (firebaseStorage && firebaseStorage.set) {
       await firebaseStorage.set(
-        `evento:${currentEvent.codigo}/participantes`,
-        JSON.stringify(updatedEvent.participantes || [])
+        `event:${currentEvent.code}/participants`,
+        JSON.stringify(updatedEvent.participants || [])
       );
     }
 
@@ -246,30 +252,30 @@ export default function EventParticipant() {
 
       if (oldNorm && firebaseStorage.removePhoneIndex) {
         try {
-          await firebaseStorage.removePhoneIndex(oldNorm, currentEvent.codigo);
+          await firebaseStorage.removePhoneIndex(oldNorm, currentEvent.code);
           console.debug(
-            `Removed phone index ${oldNorm} -> ${currentEvent.codigo}`
+            `Removed phone index ${oldNorm} -> ${currentEvent.code}`
           );
         } catch (err) {
           console.warn(
             "Erro ao remover índice de telefone:",
             err,
             oldNorm,
-            currentEvent.codigo
+            currentEvent.code
           );
         }
       }
 
       if (newNorm && firebaseStorage.setPhoneIndex) {
         try {
-          await firebaseStorage.setPhoneIndex(newNorm, currentEvent.codigo);
-          console.debug(`Set phone index ${newNorm} -> ${currentEvent.codigo}`);
+          await firebaseStorage.setPhoneIndex(newNorm, currentEvent.code);
+          console.debug(`Set phone index ${newNorm} -> ${currentEvent.code}`);
         } catch (err) {
           console.warn(
             "Erro ao criar índice de telefone:",
             err,
             newNorm,
-            currentEvent.codigo
+            currentEvent.code
           );
         }
       }
@@ -280,7 +286,7 @@ export default function EventParticipant() {
 
     // Update local state to reflect the change (we keep the in-memory event object)
     updateCurrentEvent(updatedEvent);
-    updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+    updateEventList({ ...eventList, [currentEvent.code]: updatedEvent });
   };
 
   const clearParticipantForm = () => {
@@ -290,8 +296,7 @@ export default function EventParticipant() {
     updateGifts([]);
   };
 
-  const showSuccessMessage = (isUpdate, accessCode) => {
-    updateParticipantCode(accessCode);
+  const showSuccessMessage = (isUpdate) => {
     setSuccessMessage(
       isUpdate
         ? "Cadastro atualizado com sucesso!"
@@ -305,35 +310,30 @@ export default function EventParticipant() {
 
     const existingParticipant = findExistingParticipant();
     let updatedEvent;
-    let accessCode;
 
     let isNewParticipant = false;
 
     if (existingParticipant) {
-      accessCode = existingParticipant.codigoAcesso;
       updatedEvent = {
         ...currentEvent,
-        participantes: updateExistingParticipant(existingParticipant),
+        participants: await updateExistingParticipant(existingParticipant),
       };
     } else {
       isNewParticipant = true;
-      // Prefer using the participant's phone digits as the access code when available
-      const phoneDigits = (participantPhone || "").replace(/\D/g, "");
-      accessCode = phoneDigits && phoneDigits.length >= 10 ? phoneDigits : createUniqueCode();
-      const newParticipant = createNewParticipant();
+      const newParticipant = await createNewParticipant();
 
       // If this creation is part of the forced admin flow, mark participant as admin
       const isForcedAdmin =
         pendingAdminEvent &&
         currentEvent &&
-        pendingAdminEvent === currentEvent.codigo;
+        pendingAdminEvent === currentEvent.code;
       if (isForcedAdmin) {
         newParticipant.isAdmin = true;
       }
 
       updatedEvent = {
         ...currentEvent,
-        participantes: [...eventParticipants, newParticipant],
+        participants: [...eventParticipants, newParticipant],
       };
 
       if (isForcedAdmin) {
@@ -341,6 +341,10 @@ export default function EventParticipant() {
         updatedEvent.adminParticipantId = newParticipant.id;
         // Record the event creator as the admin participant id (first participant)
         updatedEvent.createdBy = newParticipant.id;
+        // Set createdByUid on the event for direct ownership check
+        if (newParticipant.createdByUid) {
+          updatedEvent.createdByUid = newParticipant.createdByUid;
+        }
       }
     }
 
@@ -354,13 +358,13 @@ export default function EventParticipant() {
         const isForcedAdmin =
           pendingAdminEvent &&
           currentEvent &&
-          pendingAdminEvent === currentEvent.codigo;
+          pendingAdminEvent === currentEvent.code;
         if (isForcedAdmin) {
           // Full save of event (includes participantes + adminParticipantId)
           if (firebaseStorage && firebaseStorage.set) {
             await firebaseStorage.set(
-              `evento:${currentEvent.codigo}`,
-              JSON.stringify(updatedEvent)
+              `event:${currentEvent.code}`,
+              JSON.stringify(getPersistableEvent(updatedEvent))
             );
           }
 
@@ -369,16 +373,16 @@ export default function EventParticipant() {
           const newNorm = newPhone ? normalizePhone(newPhone) : null;
           if (newNorm && firebaseStorage.setPhoneIndex) {
             try {
-              await firebaseStorage.setPhoneIndex(newNorm, currentEvent.codigo);
+              await firebaseStorage.setPhoneIndex(newNorm, currentEvent.code);
               console.debug(
-                `Set phone index ${newNorm} -> ${currentEvent.codigo}`
+                `Set phone index ${newNorm} -> ${currentEvent.code}`
               );
             } catch (err) {
               console.warn(
                 "Erro ao criar índice de telefone (admin flow):",
                 err,
                 newNorm,
-                currentEvent.codigo
+                currentEvent.code
               );
             }
           }
@@ -388,26 +392,27 @@ export default function EventParticipant() {
           updateCurrentEvent(updatedEvent);
           updateEventList({
             ...eventList,
-            [currentEvent.codigo]: updatedEvent,
+            [currentEvent.code]: updatedEvent,
           });
           updateView("admin");
-          showSuccessMessage(false, accessCode);
+          updateView("admin");
+          showSuccessMessage(false);
           return;
         }
 
         await saveEventToStorage(updatedEvent, newPhone, null);
       } else {
         // Get old phone - need to deobfuscate if stored obfuscated
-        let oldPhone = existingParticipant?.celular || null;
+        let oldPhone = existingParticipant?.mobilePhone || null;
         if (oldPhone && isObfuscated(oldPhone)) {
-          const key = (currentEvent?.codigo || "") + existingParticipant.id;
+          const key = (currentEvent?.code || "") + existingParticipant.id;
           oldPhone = deobfuscatePhone(oldPhone, key);
         }
-        
+
         const newPhone = participantPhone.trim();
         const oldPhoneDigits = (oldPhone || "").replace(/\D/g, "");
         const newPhoneDigits = (newPhone || "").replace(/\D/g, "");
-        
+
         if (oldPhoneDigits && oldPhoneDigits !== newPhoneDigits) {
           // Phone changed - update index with old (deobfuscated) and new phone
           await saveEventToStorage(updatedEvent, newPhone, oldPhone);
@@ -416,7 +421,7 @@ export default function EventParticipant() {
         }
       }
 
-      showSuccessMessage(!!existingParticipant, accessCode);
+      showSuccessMessage(!!existingParticipant);
     } catch (error) {
       message.error({ message: "Erro ao cadastrar. Tente novamente." });
       console.error("Erro ao cadastrar participante:", error);
@@ -424,28 +429,69 @@ export default function EventParticipant() {
   };
 
   // ===== View Result After Draw =====
-  const showParticipantResult = () => {
-    const normalizedInput = normalizeAccessCode(eventParticipantId);
-    const foundParticipant = eventParticipants.find(
-      (p) => normalizeAccessCode(p.codigoAcesso) === normalizedInput
-    );
+  // ===== View Result After Draw =====
+  const showParticipantResult = async () => {
+    const inputDigits = (eventParticipantId || "").replace(/\D/g, "");
+    if (!inputDigits || inputDigits.length < 10) {
+      message.error({ message: "Informe um número de celular válido." });
+      return;
+    }
+
+    // We need to match hash
+    const inputHash = await hashPhone(inputDigits);
+
+    const foundParticipant = eventParticipants.find((p) => {
+      if (p.mobilePhoneHash) {
+        return p.mobilePhoneHash === inputHash;
+      }
+      // Fallback for non-hashed phones (older data)
+      return false;
+    });
 
     if (!foundParticipant) {
-      message.error({ message: "Código inválido!" });
+      // Try to recover by checking obfuscated phones if hash is missing (legacy)
+      const matchLegacy = eventParticipants.find((p) => {
+        if (!p.mobilePhoneHash && p.mobilePhone) {
+          // If obfuscated
+          if (isObfuscated(p.mobilePhone)) {
+            const key = (currentEvent?.code || "") + p.id;
+            const clear = deobfuscatePhone(p.mobilePhone, key);
+            return clear.replace(/\D/g, "") === inputDigits;
+          }
+          // If clear
+          return p.mobilePhone.replace(/\D/g, "") === inputDigits;
+        }
+        return false;
+      });
+
+      if (matchLegacy) {
+        updateCurrentEvent({
+          ...currentEvent,
+          currentParticipant: matchLegacy,
+        });
+        setAccessedViaParticipantCode(true);
+        updateView("resultado");
+        return;
+      }
+
+      message.error({
+        message: "Participante não encontrado com este celular!",
+      });
       return;
     }
 
     updateCurrentEvent({
       ...currentEvent,
-      participanteAtual: foundParticipant,
+      currentParticipant: foundParticipant,
     });
+    setAccessedViaParticipantCode(true);
     updateView("resultado");
   };
 
   // ===== Render Helpers =====
   const renderChildGiftItem = (child, childIndex) => {
     const normalized = normalizeChild(child);
-    const { nome: childNameDisplay, presentes: childGifts } = normalized;
+    const { name: childNameDisplay, gifts: childGifts } = normalized;
 
     return (
       <div key={childIndex} className="bg-gray-50 p-3 rounded">
@@ -507,35 +553,35 @@ export default function EventParticipant() {
 
   const renderParticipantListItem = (participant) => {
     const childrenNames = includeChildren
-      ? participant.filhos?.map((f) => (typeof f === "string" ? f : f.nome)) ||
+      ? participant.children?.map((f) => (typeof f === "string" ? f : f.name)) ||
       []
       : [];
-    const hasGifts = participant.presentes?.length > 0;
+    const hasGifts = participant.gifts?.length > 0;
     const hasChildGifts =
       includeChildren &&
-      participant.filhos?.some(
-        (f) => typeof f !== "string" && f.presentes?.length > 0
+      participant.children?.some(
+        (f) => typeof f !== "string" && f.gifts?.length > 0
       );
 
     return (
       <div key={participant.id} className="text-sm text-gray-700">
-        {participant.nome}
+        {participant.name}
         {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
 
         {hasGifts && (
           <div className="text-xs text-gray-500 mt-1">
-            Sugestões: {participant.presentes.join(", ")}
+            Sugestões: {participant.gifts.join(", ")}
           </div>
         )}
 
         {hasChildGifts && (
           <div className="text-xs text-gray-500 mt-1">
-            {participant.filhos.map((child, i) => {
+            {participant.children.map((child, i) => {
               const normalized = normalizeChild(child);
-              return normalized.presentes.length > 0 ? (
+              return normalized.gifts.length > 0 ? (
                 <div key={i}>
-                  Sugestões ({normalized.nome}):{" "}
-                  {normalized.presentes.join(", ")}
+                  Sugestões ({normalized.name}):{" "}
+                  {normalized.gifts.join(", ")}
                 </div>
               ) : null;
             })}
@@ -547,22 +593,13 @@ export default function EventParticipant() {
 
   const renderSuccessCard = () => (
     <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-      <p className="text-green-800 font-semibold mb-2">{successMessage}</p>
-      <p className="text-sm text-green-700 mb-3">
-        Guarde este código para ver seu amigo secreto depois do sorteio:
+      <p className="text-xl text-green-800 font-semibold mb-4">
+        {successMessage}
       </p>
-      <div className="bg-white border border-green-500 rounded-lg p-4 mb-3 flex items-center justify-between">
-        <p className="text-3xl font-bold text-green-600 tracking-wider">
-          {(() => {
-            const digits = (participantCode || "").replace(/\D/g, "");
-            if (digits.length >= 10) {
-              return formatMobileNumber(digits);
-            }
-            return participantCode;
-          })()}
-        </p>
-        <CopyButton text={participantCode} />
-      </div>
+      <p className="text-green-700">
+        Agora é só aguardar o sorteio! <br />
+        Você poderá conferir seu amigo secreto usando seu celular.
+      </p>
     </div>
   );
 
@@ -678,10 +715,10 @@ export default function EventParticipant() {
       {currentEvent && !isDrawComplete && participantName === "" && (
         <div className="py-4">
           <QRCodeCard
-            url={`${window.location.origin}?code=${currentEvent.codigo}`}
+            url={`${window.location.origin}?code=${currentEvent.code}`}
             label="Compartilhe este evento"
             size={200}
-            eventName={currentEvent.nome}
+            eventName={currentEvent.name}
           />
         </div>
       )}
@@ -698,7 +735,7 @@ export default function EventParticipant() {
           {eventParticipants
             .slice()
             .sort((a, b) =>
-              a.nome.localeCompare(b.nome, undefined, { sensitivity: "base" })
+              a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
             )
             .map(renderParticipantListItem)}
         </div>
@@ -714,14 +751,14 @@ export default function EventParticipant() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Digite seu código de acesso
+          Confirme seu celular para ver o resultado
         </label>
         <input
-          type="text"
-          placeholder="Código recebido no cadastro"
+          type="tel"
+          placeholder="(11) 99999-9999"
           value={eventParticipantId}
           onChange={(e) =>
-            updateEventParticipantId(e.target.value.toUpperCase())
+            updateEventParticipantId(formatMobileNumber(e.target.value))
           }
           className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
         />
@@ -769,24 +806,33 @@ export default function EventParticipant() {
 
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {currentEvent?.nome}
+            {currentEvent?.name}
           </h2>
 
-          {currentEvent?.valorSugerido && (
+          {currentEvent?.suggestedValue && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">
                 Valor sugerido:{" "}
                 <span className="font-bold">
-                  R$ {currentEvent.valorSugerido}
+                  R$ {currentEvent.suggestedValue}
                 </span>
               </p>
             </div>
           )}
 
           {/* Show admin access button when the current logged-in participant is the admin */}
-          {accessedViaParticipantCode &&
-            currentEvent?.participanteAtual &&
-            currentEvent?.participanteAtual.isAdmin && (
+          {accessedViaParticipantCode && (() => {
+            const isAdminFromCurrentParticipant = !!(
+              currentEvent?.currentParticipant && currentEvent.currentParticipant.isAdmin
+            );
+            const isAdminFromUid = (() => {
+              if (!currentUid) return false;
+              const parts = currentEvent?.participants || [];
+              return parts.some(
+                (p) => p.isAdmin && p.createdByUid && p.createdByUid === currentUid
+              );
+            })();
+            return (isAdminFromCurrentParticipant || isAdminFromUid) && (
               <div className="mb-4">
                 <button
                   onClick={() => updateView("admin")}
@@ -795,8 +841,10 @@ export default function EventParticipant() {
                   Acessar Admin
                 </button>
               </div>
-            )}
-
+            );
+          })
+          ()
+          }
           {renderEventContent()}
         </div>
         <Footer />

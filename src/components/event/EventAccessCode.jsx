@@ -1,8 +1,8 @@
 import { ExternalLink } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useFirebase } from "../../context/FirebaseContext";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
 import { useMessage } from "../message/MessageContext";
-import { useFirebase } from "../../context/FirebaseContext";
 
 export default function EventAccessCode({
   recuperarPorCelular: recoverCodeByPhone,
@@ -188,7 +188,7 @@ export default function EventAccessCode({
 
       // Single match: navigate directly
       if (normalized.length === 1) {
-        const eventCode = normalized[0].event?.codigo;
+        const eventCode = normalized[0].event?.code;
         if (eventCode && recuperarEventoPorCelular) {
           await recuperarEventoPorCelular(eventCode, phoneNumber);
           reset();
@@ -215,7 +215,7 @@ export default function EventAccessCode({
       .map((item) => {
         if (!item) return null;
         if (item.event) return item;
-        if (item.codigo || item.code) return { event: item, participant: null };
+        if (item.code || item.code) return { event: item, participant: null };
         return null;
       })
       .filter(Boolean);
@@ -304,19 +304,19 @@ export default function EventAccessCode({
           <div className="space-y-2">
             {matches.map((m) => (
               <div
-                key={m.event.codigo}
+                key={m.event.code}
                 className="flex flex-col gap-3 p-3 bg-white rounded-lg border items-center justify-between sm:flex-row"
               >
                 <div className="text-center sm:text-left">
                   <div className="font-medium text-gray-800">
-                    {m.event.nome}
+                    {m.event.name}
                   </div>
                   <div className="text-xs text-gray-500">
-                    Código: {m.event.codigo}
+                    Código: {m.event.code}
                   </div>
                 </div>
                 <button
-                  onClick={() => handleSelectEvent(m.event.codigo)}
+                  onClick={() => handleSelectEvent(m.event.code)}
                   className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center gap-2 justify-center font-medium transition"
                 >
                   <span>Acessar</span>

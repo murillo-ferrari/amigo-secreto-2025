@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { createUniqueCode } from "../../utils/helpers";
+import { useEvent } from "../../context/EventContext";
+import firebaseStorage from "../../firebase";
+import { createUniqueCode, getPersistableEvent } from "../../utils/helpers";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
-import firebaseStorage from "../../firebase";
-import { useEvent } from "../../context/EventContext";
 
 export default function CriarEvento() {
   // Get all state from context instead of props
@@ -30,16 +30,15 @@ export default function CriarEvento() {
 
     const eventUniqueCode = createUniqueCode();
 
-    /* Check if those pt-br string can be renamed to english */
     const newEventRecord = {
-      nome: eventName,
-      valorSugerido: suggestedValue,
-      incluirFilhos: includeChildren,
-      codigo: eventUniqueCode,
-      participantes: [],
-      sorteado: false,
-      sorteio: {},
-      dataCriacao: new Date().toISOString(),
+      name: eventName,
+      suggestedValue: suggestedValue,
+      includeChildrenOption: includeChildren,
+      code: eventUniqueCode,
+      participants: [],
+      drawn: false,
+      draw: {},
+      creationDate: Date.now(),
     };
 
     // To save in Firebase, remove the admin code in text and add ownership metadata
@@ -62,8 +61,8 @@ export default function CriarEvento() {
 
     try {
       await firebaseStorage.set(
-        `evento:${eventUniqueCode}`,
-        JSON.stringify(eventToSave)
+        `event:${eventUniqueCode}`,
+        JSON.stringify(getPersistableEvent(eventToSave))
       );
       updateEventList({ ...eventList, [eventUniqueCode]: newEventRecord });
       updateCurrentEvent(newEventRecord); // Mantém o código em texto para a sessão atual
@@ -153,14 +152,14 @@ export default function CriarEvento() {
                 </p>
                 <p className="text-sm text-gray-700 mb-4">Código do evento:</p>
                 <p className="text-3xl font-bold text-green-800 mb-4">
-                  {createdEvent.codigo}
+                  {createdEvent.code}
                 </p>
                 <div className="flex gap-2 justify-center">
                   <button
                     onClick={() => {
                       // Proceed to create the first participant (admin)
                       if (setPendingAdminEvent)
-                        setPendingAdminEvent(createdEvent.codigo);
+                        setPendingAdminEvent(createdEvent.code);
                       setCreatedEvent(null);
                       setView("evento");
                     }}

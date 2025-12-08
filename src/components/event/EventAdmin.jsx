@@ -1,14 +1,15 @@
 import { Settings, Shuffle, Trash, Trash2, Users } from "lucide-react";
 import { useState } from "react";
+import { useEvent } from "../../context/EventContext";
+import firebaseStorage from "../../firebase";
 import { performSecretSantaDraw } from "../../utils/drawEvent";
-import { calculateTotalParticipants, deobfuscatePhone, isObfuscated, formatMobileNumber } from "../../utils/helpers";
+import { calculateTotalParticipants, deobfuscatePhone, formatMobileNumber, isObfuscated, getPersistableEvent } from "../../utils/helpers";
 import CopyButton from "../common/CopyButton";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
-import firebaseStorage from "../../firebase";
-import { useEvent } from "../../context/EventContext";
+import QRCodeCard from "./eventQRCode";
 
 export default function AdminEvento() {
   // Get all state from context instead of props
@@ -24,29 +25,29 @@ export default function AdminEvento() {
   const [page, setPage] = useState(1);
   const message = useMessage();
   const pageSize = 5;
-  const participants = currentEvent?.participantes || [];
+  const participants = currentEvent?.participants || [];
   const totalParticipants = participants.length;
   const hasAnyFilhos = participants.some(
-    (p) => p.filhos && p.filhos.length > 0
+    (p) => p.children && p.children.length > 0
   );
   const totalPages = Math.max(1, Math.ceil(totalParticipants / pageSize));
-  const isDrawn = !!currentEvent?.sorteado;
-  const includeChildren = currentEvent?.incluirFilhos ?? true;
+  const isDrawn = !!currentEvent?.drawn;
+  const includeChildren = currentEvent?.includeChildrenOption ?? true;
 
   // Helper to display participant phone (deobfuscate if needed)
   const displayPhone = (participant) => {
-    if (!participant?.celular) return "";
-    if (isObfuscated(participant.celular)) {
-      const key = (currentEvent?.codigo || "") + participant.id;
-      const deobfuscated = deobfuscatePhone(participant.celular, key);
+    if (!participant?.mobilePhone) return "";
+    if (isObfuscated(participant.mobilePhone)) {
+      const key = (currentEvent?.code || "") + participant.id;
+      const deobfuscated = deobfuscatePhone(participant.mobilePhone, key);
       return formatMobileNumber(deobfuscated);
     }
-    return participant.celular;
+    return participant.mobilePhone;
   };
 
   // Editable form state for event metadata
-  const [editName, setEditName] = useState(currentEvent?.nome || "");
-  const [editValue, setEditValue] = useState(currentEvent?.valorSugerido || "");
+  const [editName, setEditName] = useState(currentEvent?.name || "");
+  const [editValue, setEditValue] = useState(currentEvent?.suggestedValue || "");
   const [isEditing, setIsEditing] = useState(false);
 
   // Helper: verify current authenticated UID is the event owner/admin creator
@@ -63,14 +64,15 @@ export default function AdminEvento() {
       // Fallback: admin participant's createdByUid
       const adminId = currentEvent?.adminParticipantId || null;
       if (adminId) {
-        const adminParticipant = (currentEvent.participantes || []).find(
+        const adminParticipant = (currentEvent.participants || []).find(
           (p) => p.id === adminId
         );
         if (adminParticipant && adminParticipant.createdByUid === uid) return true;
       }
 
       return false;
-    } catch (err) {
+    } catch (error) {
+      console.warn("isAuthorizedAdmin failed:", error);
       return false;
     }
   };
@@ -84,8 +86,8 @@ export default function AdminEvento() {
 
     const updatedEvent = {
       ...currentEvent,
-      nome: nameTrim,
-      valorSugerido: editValue || undefined,
+      name: nameTrim,
+      suggestedValue: editValue || undefined,
     };
 
     const eventToStore = { ...updatedEvent };
@@ -109,8 +111,8 @@ export default function AdminEvento() {
       }
 
       await firebaseStorage.set(
-        `evento:${currentEvent.codigo}`,
-        JSON.stringify(eventToStore)
+        `event:${currentEvent.code}`,
+        JSON.stringify(getPersistableEvent(eventToStore))
       );
       // Keep the plain admin code in-memory/state for the current session/UI,
       // but avoid persisting it to the database.
@@ -118,7 +120,7 @@ export default function AdminEvento() {
       updateCurrentEvent(updatedEventForState);
       updateEventList({
         ...eventList,
-        [currentEvent.codigo]: updatedEventForState,
+        [currentEvent.code]: updatedEventForState,
       });
       message.success({ message: "Dados do evento salvos com sucesso!" });
       setIsEditing(false);
@@ -129,8 +131,8 @@ export default function AdminEvento() {
   };
 
   const cancelEdit = () => {
-    setEditName(currentEvent?.nome || "");
-    setEditValue(currentEvent?.valorSugerido || "");
+    setEditName(currentEvent?.name || "");
+    setEditValue(currentEvent?.suggestedValue || "");
     setIsEditing(false);
   };
 
@@ -140,7 +142,7 @@ export default function AdminEvento() {
   const safeName = (val) => {
     if (val == null) return "";
     if (typeof val === "string") return val;
-    if (typeof val === "object" && val.nome) return val.nome;
+    if (typeof val === "object" && val.name) return val.name;
     return String(val);
   };
 
@@ -166,39 +168,39 @@ export default function AdminEvento() {
     });
     if (!confirmed) return;
 
-    const participantToRemove = (currentEvent.participantes || []).find(
+    const participantToRemove = (currentEvent.participants || []).find(
       (p) => p.id === participantId
     );
 
     const updatedEvent = {
       ...currentEvent,
-      participantes: (currentEvent.participantes || []).filter(
+      participants: (currentEvent.participants || []).filter(
         (p) => p.id !== participantId
       ),
-      sorteado: false,
-      sorteio: {},
+      drawn: false,
+      draw: {},
     };
 
     try {
       await firebaseStorage.set(
-        `evento:${currentEvent.codigo}`,
-        JSON.stringify(updatedEvent)
+        `event:${currentEvent.code}`,
+        JSON.stringify(getPersistableEvent(updatedEvent))
       );
 
       // Clean up phone index for the removed participant (best-effort)
       try {
         const normalizePhoneDigits = (p) => (p || "").replace(/\D/g, "");
-        let phone = participantToRemove?.celular || null;
-        
+        let phone = participantToRemove?.mobilePhone || null;
+
         // Deobfuscate if needed
         if (phone && isObfuscated(phone)) {
-          const key = (currentEvent?.codigo || "") + participantToRemove.id;
+          const key = (currentEvent?.code || "") + participantToRemove.id;
           phone = deobfuscatePhone(phone, key);
         }
-        
+
         const phoneNorm = phone ? normalizePhoneDigits(phone) : null;
         if (phoneNorm && firebaseStorage.removePhoneIndex) {
-          await firebaseStorage.removePhoneIndex(phoneNorm, currentEvent.codigo);
+          await firebaseStorage.removePhoneIndex(phoneNorm, currentEvent.code);
         }
       } catch (err) {
         console.warn(
@@ -208,7 +210,7 @@ export default function AdminEvento() {
       }
 
       updateCurrentEvent(updatedEvent);
-      updateEventList({ ...eventList, [currentEvent.codigo]: updatedEvent });
+      updateEventList({ ...eventList, [currentEvent.code]: updatedEvent });
     } catch (error) {
       message.error({
         message: "Erro ao excluir participante. Tente novamente.",
@@ -232,22 +234,22 @@ export default function AdminEvento() {
 
     const refreshedEvent = {
       ...currentEvent,
-      sorteado: false,
-      sorteio: {},
-      dataSorteio: null,
+      drawn: false,
+      draw: {},
+      drawDate: null,
     };
 
     try {
       await firebaseStorage.set(
-        `evento:${currentEvent.codigo}`,
-        JSON.stringify(refreshedEvent)
+        `event:${currentEvent.code}`,
+        JSON.stringify(getPersistableEvent(refreshedEvent))
       );
       updateCurrentEvent(refreshedEvent);
-      updateEventList({ ...eventList, [currentEvent.codigo]: refreshedEvent });
+      updateEventList({ ...eventList, [currentEvent.code]: refreshedEvent });
       message.success({ message: "Sorteio excluído com sucesso!" });
     } catch (error) {
       message.error({ message: "Erro ao excluir sorteio. Tente novamente." });
-      console.error("Erro ao excluir sorteio:", error);
+      console.error("Erro ao excluir draw:", error);
     }
   };
 
@@ -290,19 +292,19 @@ export default function AdminEvento() {
       // First, attempt to remove phone index entries for all participants of this event
       try {
         const event =
-          currentEvent && currentEvent.codigo === eventId ? currentEvent : null;
-        const participants = event ? event.participantes || [] : [];
+          currentEvent && currentEvent.code === eventId ? currentEvent : null;
+        const participants = event ? event.participants || [] : [];
         const normalizePhoneDigits = (p) => (p || "").replace(/\D/g, "");
         for (const p of participants) {
           try {
-            let phone = p?.celular || null;
-            
+            let phone = p?.mobilePhone || null;
+
             // Deobfuscate if needed
             if (phone && isObfuscated(phone)) {
-              const key = (event?.codigo || eventId) + p.id;
+              const key = (event?.code || eventId) + p.id;
               phone = deobfuscatePhone(phone, key);
             }
-            
+
             const phoneNorm = phone ? normalizePhoneDigits(phone) : null;
             if (
               phoneNorm &&
@@ -327,7 +329,7 @@ export default function AdminEvento() {
       }
 
       // Now delete the event node
-      await firebaseStorage.delete(`evento:${eventId}`);
+      await firebaseStorage.delete(`event:${eventId}`);
       const updatedEvents = { ...eventList };
       delete updatedEvents[eventId];
       updateEventList(updatedEvents);
@@ -372,8 +374,8 @@ export default function AdminEvento() {
               {!isEditing ? (
                 <button
                   onClick={() => {
-                    setEditName(currentEvent?.nome || "");
-                    setEditValue(currentEvent?.valorSugerido || "");
+                    setEditName(currentEvent?.name || "");
+                    setEditValue(currentEvent?.suggestedValue || "");
                     setIsEditing(true);
                   }}
                   className="text-sm bg-gray-50 border px-3 py-1 rounded hover:bg-gray-100"
@@ -388,12 +390,12 @@ export default function AdminEvento() {
             {!isEditing ? (
               <div className="text-sm text-gray-600">
                 <p className="mb-1">
-                  <strong>Nome:</strong> {currentEvent.nome}
+                  <strong>Nome:</strong> {currentEvent.name}
                 </p>
                 <p>
                   <strong>Valor sugerido:</strong>{" "}
-                  {currentEvent.valorSugerido
-                    ? `R$ ${currentEvent.valorSugerido}`
+                  {currentEvent.suggestedValue
+                    ? `R$ ${currentEvent.suggestedValue}`
                     : "—"}
                 </p>
               </div>
@@ -440,67 +442,75 @@ export default function AdminEvento() {
                 </div>
               </>
             )}
+            <div className="mt-4">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeChildren}
+                  onChange={async (event) => {
+                    if (isDrawn) return;
+                    const isChecked = !!event.target.checked;
+                    try {
+                      const updatedEvent = {
+                        ...currentEvent,
+                        includeChildrenOption: isChecked,
+                      };
+                      await firebaseStorage.set(
+                        `event:${currentEvent.code}`,
+                        JSON.stringify(getPersistableEvent(updatedEvent))
+                      );
+                      updateCurrentEvent(updatedEvent);
+                      updateEventList({
+                        ...eventList,
+                        [currentEvent.code]: updatedEvent,
+                      });
+                    } catch (error) {
+                      console.error(
+                        "Erro ao atualizar opção includeChildrenOption:",
+                        error
+                      );
+                      message.error({
+                        message:
+                          "Erro ao salvar a configuração. Tente novamente.",
+                      });
+                    }
+                  }}
+                />
+                <span className="text-sm text-gray-700">
+                  Incluir filhos (sem celular)
+                </span>
+              </label>
+              {isDrawn && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Não é possível alterar após o sorteio.
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+          <div className="mb-4">
+            {/*  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
               <p className="text-sm text-gray-800">
                 <strong>Código Participantes</strong>
               </p>
               <div className="flex items-center gap-2">
                 <p className="text-2xl font-bold text-blue-600">
-                  {currentEvent.codigo}
+                  {currentEvent.code}
                 </p>
-                <CopyButton text={currentEvent.codigo} />
+                <CopyButton text={currentEvent.code} />
               </div>
+            </div> */}
+            <div className="flex justify-center">
+              <QRCodeCard
+                url={`${window.location.origin}?code=${currentEvent.code}`}
+                label="Link para convidar"
+                size={128}
+                eventName={currentEvent.name}
+              />
             </div>
-            {/* Admin code removed from UI - admin is now the first participant */}
           </div>
 
-          <div className="mb-6">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={includeChildren}
-                onChange={async (event) => {
-                  if (isDrawn) return;
-                  const isChecked = !!event.target.checked;
-                  try {
-                    const updatedEvent = {
-                      ...currentEvent,
-                      incluirFilhos: isChecked,
-                    };
-                    await firebaseStorage.set(
-                      `evento:${currentEvent.codigo}`,
-                      JSON.stringify(updatedEvent)
-                    );
-                    updateCurrentEvent(updatedEvent);
-                    updateEventList({
-                      ...eventList,
-                      [currentEvent.codigo]: updatedEvent,
-                    });
-                  } catch (error) {
-                    console.error(
-                      "Erro ao atualizar opção incluirFilhos:",
-                      error
-                    );
-                    message.error({
-                      message:
-                        "Erro ao salvar a configuração. Tente novamente.",
-                    });
-                  }
-                }}
-              />
-              <span className="text-sm text-gray-700">
-                Incluir filhos (sem celular)
-              </span>
-            </label>
-            {isDrawn && (
-              <p className="text-xs text-gray-500 mt-1">
-                Não é possível alterar após o sorteio.
-              </p>
-            )}
-          </div>
+
 
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -515,7 +525,7 @@ export default function AdminEvento() {
             {participants.length === 0 ? (
               <p className="text-gray-500 text-sm">
                 Nenhum participante ainda. Compartilhe o código{" "}
-                {currentEvent.codigo}
+                {currentEvent.code}
               </p>
             ) : (
               <div className="space-y-3">
@@ -531,48 +541,45 @@ export default function AdminEvento() {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <p className="font-semibold text-gray-800">
-                            {p.nome}
+                            {p.name}
                           </p>
                           <p className="text-sm text-gray-600">{displayPhone(p)}</p>
-                          {p.filhos && p.filhos.length > 0 && (
+                          {p.children && p.children.length > 0 && (
                             <div>
                               <p className="text-sm text-gray-500">
                                 Filhos:{" "}
-                                {p.filhos
+                                {p.children
                                   .map((f) =>
-                                    typeof f === "string" ? f : f.nome
+                                    typeof f === "string" ? f : f.name
                                   )
                                   .join(", ")}
                               </p>
-                              {p.filhos.map((f) => {
+                              {p.children.map((f) => {
                                 const childObject =
                                   typeof f === "string" ? null : f;
                                 const giftsArray = childObject
-                                  ? childObject.presentes || []
+                                  ? childObject.gifts || []
                                   : [];
                                 return childObject && giftsArray.length > 0 ? (
                                   <p
-                                    key={childObject.nome}
+                                    key={childObject.name}
                                     className="text-sm text-gray-500"
                                   >
-                                    Sugestões ({childObject.nome}):{" "}
+                                    Sugestões ({childObject.name}):{" "}
                                     {giftsArray.join(", ")}
                                   </p>
                                 ) : null;
                               })}
                             </div>
                           )}
-                          {p.presentes && p.presentes.length > 0 && (
+                          {p.gifts && p.gifts.length > 0 && (
                             <p className="text-sm text-gray-500 mt-1">
-                              Sugestões: {p.presentes.join(", ")}
+                              Sugestões: {p.gifts.join(", ")}
                             </p>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            {p.codigoAcesso}
-                          </span>
-                          {!currentEvent.sorteado &&
+                          {!currentEvent.drawn &&
                             // Do not allow deleting the admin participant
                             ((currentEvent?.adminParticipantId || p.isAdmin) &&
                               (currentEvent.adminParticipantId === p.id ||
@@ -600,17 +607,17 @@ export default function AdminEvento() {
                         <div className="space-y-1 pt-2 border-t">
                           <div className="flex justify-between items-center">
                             <p className="text-sm">
-                              <strong>{p.nome}</strong> tirou:{" "}
-                              {safeName(currentEvent.sorteio[p.nome])}
+                              <strong>{p.name}</strong> tirou:{" "}
+                              {safeName(currentEvent.draw[p.name])}
                             </p>
                           </div>
-                          {p.filhos &&
-                            p.filhos.map((filho) => {
+                          {p.children &&
+                            p.children.map((filho) => {
                               const childName =
                                 typeof filho === "string"
                                   ? filho
-                                  : filho && filho.nome
-                                    ? filho.nome
+                                  : filho && filho.name
+                                    ? filho.name
                                     : String(filho);
                               return (
                                 <div
@@ -619,7 +626,7 @@ export default function AdminEvento() {
                                 >
                                   <p className="text-sm">
                                     <strong>{childName}</strong> tirou:{" "}
-                                    {safeName(currentEvent.sorteio[childName])}
+                                    {safeName(currentEvent.draw[childName])}
                                   </p>
                                 </div>
                               );
@@ -693,7 +700,7 @@ export default function AdminEvento() {
             </button>
           )}
 
-          {currentEvent.sorteado && (
+          {currentEvent.drawn && (
             <div className="space-y-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                 <p className="text-green-800 font-semibold">
@@ -725,7 +732,7 @@ export default function AdminEvento() {
           <div className="mt-4">
             <button
               onClick={async () => {
-                const deleted = await removeEvent(currentEvent.codigo);
+                const deleted = await removeEvent(currentEvent.code);
                 if (deleted) setView("home");
               }}
               className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"

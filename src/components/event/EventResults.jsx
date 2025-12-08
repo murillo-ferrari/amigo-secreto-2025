@@ -1,8 +1,6 @@
-// import { gerarLinkWhatsApp } from '../utils/helpers';
-import CopyButton from "../common/CopyButton";
+import { useEvent } from "../../context/EventContext";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
-import { useEvent } from "../../context/EventContext";
 
 export default function SecretSantaResults() {
   // Get all state from context instead of props
@@ -13,24 +11,24 @@ export default function SecretSantaResults() {
     setAccessCode: updateAccessCode,
   } = useEvent();
 
-  const currentParticipant = currentEvent?.participanteAtual;
-  const participantAccessCode = currentParticipant?.codigoAcesso || "";
+  const currentParticipant = currentEvent?.currentParticipant;
+  const participantAccessCode = currentParticipant?.codeAcesso || "";
   const eventSuccessMessage =
     currentEvent?.successMessage ||
     (currentParticipant ? "Seu código de acesso" : null);
 
   // Find the participant corresponding to the drawn friend to display suggestions
   const getParticipantByName = (name) => {
-    const eventParticipants = currentEvent?.participantes || [];
+    const eventParticipants = currentEvent?.participants || [];
     for (const participant of eventParticipants) {
-      if (participant.nome === name) return participant;
-      if (participant.filhos) {
-        for (const participantChild of participant.filhos) {
+      if (participant.name === name) return participant;
+      if (participant.children) {
+        for (const participantChild of participant.children) {
           if (typeof participantChild === "string") {
             if (participantChild === name)
-              return { nome: participantChild, presentes: [] };
+              return { name: participantChild, gifts: [] };
           } else {
-            if (participantChild.nome === name) return participantChild;
+            if (participantChild.name === name) return participantChild;
           }
         }
       }
@@ -41,22 +39,22 @@ export default function SecretSantaResults() {
   const normalizeName = (inputValue) => {
     if (inputValue == null) return "";
     if (typeof inputValue === "string") return inputValue;
-    if (typeof inputValue === "object" && inputValue.nome)
-      return inputValue.nome;
+    if (typeof inputValue === "object" && inputValue.name)
+      return inputValue.name;
     return String(inputValue);
   };
 
   const normalizedFriendName = currentParticipant
-    ? normalizeName(currentEvent?.sorteio?.[currentParticipant.nome])
+    ? normalizeName(currentEvent?.draw?.[currentParticipant.name])
     : null;
   const friendObject = normalizedFriendName
     ? getParticipantByName(normalizedFriendName)
     : null;
-  const frindGifts = friendObject?.presentes || [];
-  const includeChildren = currentEvent?.incluirFilhos ?? true;
+  const frindGifts = friendObject?.gifts || [];
+  const includeChildren = currentEvent?.includeChildrenOption ?? true;
 
   /*   const enviarWhatsApp = (nome, amigo, celular) => {
-    const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.nome, eventoAtual.valorSugerido);
+    const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.name, eventoAtual.suggestedValue);
     window.open(url, '_blank');
   }; */
 
@@ -76,14 +74,14 @@ export default function SecretSantaResults() {
         </button>
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {currentEvent.nome}
+            {currentEvent.name}
           </h2>
-          {currentEvent.valorSugerido && (
+          {currentEvent.suggestedValue && (
             <div className="mb-6 pb-6 border-b">
               <p className="text-gray-600">
                 Valor sugerido:{" "}
                 <span className="font-bold">
-                  R$ {currentEvent.valorSugerido}
+                  R$ {currentEvent.suggestedValue}
                 </span>
               </p>
             </div>
@@ -92,14 +90,14 @@ export default function SecretSantaResults() {
           <div className="space-y-4">
             <div className="text-left text-xl">
               <p>
-                Olá, <span className="font-bold">{currentParticipant.nome}</span>!
+                Olá, <span className="font-bold">{currentParticipant.name}</span>!
               </p>
               {/* <p className="text-sm mt-1">Abaixo está seu amigo secreto e as sugestões de presente.</p> */}
             </div>
             <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
               <p className="text-sm text-gray-600 mb-2">Seu amigo secreto é:</p>
               <p className="text-3xl font-bold text-red-600">
-                {normalizeName(currentEvent.sorteio[currentParticipant.nome])}
+                {normalizeName(currentEvent.draw[currentParticipant.name])}
               </p>
               {frindGifts.length > 0 && (
                 <div className="mt-3 text-left">
@@ -116,21 +114,21 @@ export default function SecretSantaResults() {
               {/* Optional: share to WhatsApp button can be re-enabled here */}
             </div>
 
-            {includeChildren && currentParticipant.filhos &&
-              currentParticipant.filhos.map((filho) => {
+            {includeChildren && currentParticipant.children &&
+              currentParticipant.children.map((filho) => {
                 const childName =
                   typeof filho === "string"
                     ? filho
-                    : filho && filho.nome
-                      ? filho.nome
+                    : filho && filho.name
+                      ? filho.name
                       : String(filho);
                 const childFriendName = normalizeName(
-                  currentEvent.sorteio[childName]
+                  currentEvent.draw[childName]
                 );
                 const childFriendObject = childFriendName
                   ? getParticipantByName(childFriendName)
                   : null;
-                const childFriendGift = childFriendObject?.presentes || [];
+                const childFriendGift = childFriendObject?.gifts || [];
 
                 return (
                   <div
@@ -160,25 +158,7 @@ export default function SecretSantaResults() {
               })}
           </div>
 
-          {participantAccessCode && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 text-center">
-                <p className="text-green-800 font-semibold mb-2">
-                  {eventSuccessMessage}
-                </p>
-                <p className="text-sm text-green-700 mb-3">
-                  Guarde este código para ver seu amigo secreto depois do
-                  sorteio:
-                </p>
-                <div className="bg-white border border-green-500 rounded-lg p-4 mb-3 flex items-center justify-between">
-                  <p className="text-3xl font-bold text-green-600 tracking-wider">
-                    {participantAccessCode}
-                  </p>
-                  <CopyButton text={participantAccessCode} />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Access code display removed */}
         </div>
       </div>
       <Footer />

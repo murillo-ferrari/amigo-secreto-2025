@@ -59,7 +59,7 @@ export const calculateTotalParticipants = (participants) => {
     return 0;
   }
   return participants.reduce((total, p) => {
-    return total + 1 + (p.filhos && p.filhos.length ? p.filhos.length : 0);
+    return total + 1 + (p.children && p.children.length ? p.children.length : 0);
   }, 0);
 };
 
@@ -73,11 +73,11 @@ export const normalizeAccessCode = (val) => {
   return String(val).toUpperCase();
 };
 // Gera URL do WhatsApp com mensagem
-/* export const gerarLinkWhatsApp = (nome, amigo, celular, nomeEvento, valorSugerido) => {
+/* export const gerarLinkWhatsApp = (nome, amigo, celular, nomeEvento, suggestedValue) => {
   const mensagem = `🎁 *Amigo Secreto - ${nomeEvento}*\n\n` +
                   `Olá ${nome}!\n\n` +
                   `Seu amigo secreto é: *${amigo}*\n\n` +
-                  (valorSugerido ? `Valor sugerido: R$ ${valorSugerido}\n\n` : '') +
+                  (suggestedValue ? `Valor sugerido: R$ ${suggestedValue}\n\n` : '') +
                   `Boas compras! 🎉`;
   
   return `https://wa.me/${celular.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
@@ -85,9 +85,19 @@ export const normalizeAccessCode = (val) => {
 
 // Re-export crypto utilities for convenience
 export {
-  hashPhone,
-  obfuscatePhone,
-  deobfuscatePhone,
-  maskPhone,
-  isObfuscated,
+  deobfuscatePhone, hashPhone, isObfuscated, maskPhone, obfuscatePhone
 } from "./crypto.js";
+
+/**
+ * Return a shallow copy of the event object with transient UI-only fields removed.
+ * Use this before persisting the full event object to storage.
+ */
+export const getPersistableEvent = (eventObj) => {
+  if (!eventObj || typeof eventObj !== "object") return eventObj;
+  const {
+    currentParticipant,
+    // future transient keys can be listed here
+    ...rest
+  } = eventObj;
+  return rest;
+};

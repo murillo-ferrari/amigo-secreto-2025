@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { useMessage } from "../components/message/MessageContext";
 import firebaseStorage from "../firebase";
 import eventService from "../services/eventService";
-import { useMessage } from "../components/message/MessageContext";
+import { deobfuscatePhone, formatMobileNumber, hashPhone, isObfuscated } from "../utils/helpers";
 
 const EventContext = createContext();
 
@@ -78,25 +79,34 @@ export const EventProvider = ({ children }) => {
         }
     };
 
-    const handleAdminAccess = (foundEvent) => {
+    const _handleAdminAccess = (foundEvent) => {
         setCurrentEvent(foundEvent);
         setView("admin");
         setAccessCode("");
     };
 
     const handleExistingParticipantWithDraw = (foundEvent, foundParticipant) => {
-        setCurrentEvent({ ...foundEvent, participanteAtual: foundParticipant });
+        setCurrentEvent({ ...foundEvent, currentParticipant: foundParticipant });
         setView("resultado");
         setAccessCode("");
         setAccessedViaParticipantCode(true);
     };
 
     const handleExistingParticipantNoDraw = (foundEvent, foundParticipant) => {
-        setCurrentEvent({ ...foundEvent, participanteAtual: foundParticipant });
-        setParticipantName(foundParticipant.nome);
-        setParticipantMobileNumber(foundParticipant.celular);
-        setParticipantChildren(foundParticipant.filhos || []);
-        setGifts(foundParticipant.presentes || []);
+        setCurrentEvent({ ...foundEvent, currentParticipant: foundParticipant });
+        setParticipantName(foundParticipant.name);
+
+        // Deobfuscate phone for display in form
+        let phoneForDisplay = foundParticipant.mobilePhone || "";
+        if (isObfuscated(phoneForDisplay)) {
+            const key = (foundEvent?.code || "") + foundParticipant.id;
+            const deobfuscated = deobfuscatePhone(phoneForDisplay, key);
+            phoneForDisplay = formatMobileNumber(deobfuscated);
+        }
+        setParticipantMobileNumber(phoneForDisplay);
+
+        setParticipantChildren(foundParticipant.children || []);
+        setGifts(foundParticipant.gifts || []);
         setView("evento");
         setAccessCode("");
         setAccessedViaParticipantCode(true);
@@ -136,7 +146,7 @@ export const EventProvider = ({ children }) => {
             const foundEvent = await eventService.getEventByCode(formattedCode);
 
             if (foundEvent) {
-                setEventList((prev) => ({ ...prev, [foundEvent.codigo]: foundEvent }));
+                setEventList((prev) => ({ ...prev, [foundEvent.code]: foundEvent }));
                 handleNewParticipant(foundEvent);
                 return;
             }
@@ -152,7 +162,7 @@ export const EventProvider = ({ children }) => {
             // Check if admin (removed in original code, but logic structure remains)
             // Assuming no separate admin code for now based on original App.jsx comments
 
-            if (foundParticipant && searchEvent.sorteado) {
+            if (foundParticipant && searchEvent.drawn) {
                 handleExistingParticipantWithDraw(searchEvent, foundParticipant);
                 return;
             }
@@ -184,7 +194,7 @@ export const EventProvider = ({ children }) => {
 
             if (matches.length === 1) {
                 const { event: parsedEvent, participant } = matches[0];
-                if (parsedEvent.sorteado) {
+                if (parsedEvent.drawn) {
                     handleExistingParticipantWithDraw(parsedEvent, participant);
                 } else {
                     handleExistingParticipantNoDraw(parsedEvent, participant);
@@ -215,9 +225,11 @@ export const EventProvider = ({ children }) => {
                 return;
             }
 
-            const participantsList = foundEvent.participantes || [];
+            // Hash the input phone for comparison
+            const inputPhoneHash = await hashPhone(cleanedMobileNumber);
+            const participantsList = foundEvent.participants || [];
             const participant = participantsList.find((p) =>
-                eventService.matchesPhoneNumber(p, cleanedMobileNumber)
+                eventService.matchesPhoneHash(p, inputPhoneHash)
             );
 
             if (!participant) {
@@ -225,7 +237,7 @@ export const EventProvider = ({ children }) => {
                 return;
             }
 
-            if (foundEvent.sorteado) {
+            if (foundEvent.drawn) {
                 handleExistingParticipantWithDraw(foundEvent, participant);
             } else {
                 handleExistingParticipantNoDraw(foundEvent, participant);

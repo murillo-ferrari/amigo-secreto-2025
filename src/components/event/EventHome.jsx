@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
-import { formatMobileNumber } from "../../utils/helpers";
+import { useEffect, useState } from "react";
+import { useEvent } from "../../context/EventContext";
+import { useFirebase } from "../../context/FirebaseContext";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import EventAccessCode from "./EventAccessCode";
-import { useFirebase } from "../../context/FirebaseContext";
-import { useEvent } from "../../context/EventContext";
 
 export default function Home() {
   // Get all state from context instead of props
@@ -14,6 +13,7 @@ export default function Home() {
     setAccessCode: updateEventAccessCode,
     retrieveParticipantByPhone: retrieveCodeByPhone,
     recoverParticipantInEvent: recuperarEventoPorCelular,
+    fetchEventByCode,
     loading,
     currentUid,
   } = useEvent();
@@ -31,19 +31,37 @@ export default function Home() {
     };
   }, []);
 
-  const handleAccessClick = () => {
-    const digits = (eventAccessCode || "").replace(/\D/g, "");
-    if (digits.length < 10) {
-      return; // Input validation handled by disabled state
+  const handleAccessClick = async () => {
+    const raw = eventAccessCode || "";
+    const digits = raw.replace(/\D/g, "");
+
+    // If user entered a phone number (10 or 11 digits), start SMS flow
+    if (digits.length === 10 || digits.length === 11) {
+      setTriggerAccess(true);
+      return;
     }
-    setTriggerAccess(true);
+
+    // Otherwise treat input as event code and try to fetch event directly
+    const code = (raw || "").toUpperCase().trim();
+    if (!code) return;
+    try {
+      setTriggerAccess(false);
+      await fetchEventByCode(code);
+    } catch (err) {
+      // fetchEventByCode handles messaging; swallow errors here
+      console.error("Error fetching event by code:", err);
+    }
   };
 
   const handleReset = () => {
     setTriggerAccess(false);
   };
 
-  const isPhoneValid = (eventAccessCode || "").replace(/\D/g, "").length >= 10;
+  const rawInput = eventAccessCode || "";
+  const digitsOnly = rawInput.replace(/\D/g, "");
+  const isPhoneValid = digitsOnly.length >= 10;
+  const isCodeLike = rawInput.trim().length > 0 && !/^\d+$/.test(rawInput.trim());
+  const isInputValid = isPhoneValid || isCodeLike;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
@@ -79,33 +97,34 @@ export default function Home() {
 
           <div>
             <input
-              type="tel"
-              placeholder="Digite seu celular (com DDD)"
+              type="text"
+              placeholder="Digite o código do evento ou celular (com DDD)"
               value={eventAccessCode}
-              onChange={(e) =>
-                updateEventAccessCode(formatMobileNumber(e.target.value))
-              }
+              onChange={(e) => updateEventAccessCode(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
               disabled={triggerAccess}
             />
             {!triggerAccess && (
               <button
                 onClick={handleAccessClick}
-                disabled={loading || !isPhoneValid}
+                disabled={loading || !isInputValid}
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Carregando..." : "Acessar Evento"}
               </button>
             )}
 
-            <EventAccessCode
-              recuperarPorCelular={retrieveCodeByPhone}
-              recuperarEventoPorCelular={recuperarEventoPorCelular}
-              loading={loading}
-              phoneNumber={eventAccessCode}
-              triggerAccess={triggerAccess}
-              onReset={handleReset}
-            />
+            {/* Only render SMS verification component when phone flow is triggered */}
+            {(digitsOnly.length === 10 || digitsOnly.length === 11) && (
+              <EventAccessCode
+                recuperarPorCelular={retrieveCodeByPhone}
+                recuperarEventoPorCelular={recuperarEventoPorCelular}
+                loading={loading}
+                phoneNumber={eventAccessCode}
+                triggerAccess={triggerAccess}
+                onReset={handleReset}
+              />
+            )}
           </div>
         </div>
         <Footer />

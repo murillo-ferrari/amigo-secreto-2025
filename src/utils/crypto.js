@@ -3,8 +3,6 @@
  * Uses Web Crypto API (available in all modern browsers).
  */
 
-// Salt for hashing - makes rainbow table attacks harder
-// This is public but combined with the phone creates a unique hash
 const HASH_SALT = "amigo-secreto-2025-phone-salt";
 
 /**
@@ -27,12 +25,9 @@ export async function hashPhone(phone) {
   const hashBuffer = await crypto.subtle.digest("SHA-256", dataBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
 
-  // Convert to hex string (Firebase-safe characters)
   const hashHex = hashArray
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
-
-  // Return first 32 chars (128 bits) - sufficient for uniqueness, shorter keys
   return hashHex.substring(0, 32);
 }
 

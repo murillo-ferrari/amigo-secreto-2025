@@ -1,7 +1,7 @@
+import AppRouter from "./components/AppRouter";
+import { MessageProvider } from "./components/message/MessageProvider";
 import { EventProvider } from "./context/EventContext";
 import { FirebaseProvider } from "./context/FirebaseContext";
-import { MessageProvider } from "./components/message/MessageProvider";
-import AppRouter from "./components/AppRouter";
 
 /**
  * SecretSantaApp is the main component of the Secret Santa web app.

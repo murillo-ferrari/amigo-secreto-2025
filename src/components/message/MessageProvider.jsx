@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmModal from "./ConfirmModal";
-import Toasts from "./Toasts";
 import { MessageContext } from "./MessageContext";
+import Toasts from "./Toasts";
 
 export function MessageProvider({ children }) {
   const [toasts, setToasts] = useState([]);

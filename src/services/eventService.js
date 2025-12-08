@@ -1,5 +1,5 @@
 import firebaseStorage from "../firebase";
-import { normalizeAccessCode } from "../utils/helpers";
+import { hashPhone, normalizeAccessCode, getPersistableEvent } from "../utils/helpers";
 
 const eventService = {
   /**
@@ -8,13 +8,13 @@ const eventService = {
    */
   async listEvents() {
     try {
-      const keysResult = await firebaseStorage.list("evento:");
+      const keysResult = await firebaseStorage.list("event:");
       const loadedEvents = {};
 
       for (const key of keysResult.keys) {
         const result = await firebaseStorage.get(key);
         if (result) {
-          loadedEvents[key.replace("evento:", "")] = JSON.parse(result.value);
+          loadedEvents[key.replace("event:", "")] = JSON.parse(result.value);
         }
       }
       return loadedEvents;
@@ -35,7 +35,7 @@ const eventService = {
     const formattedCode = (code || "").toUpperCase();
     if (!formattedCode) throw new Error("Código inválido");
 
-    const result = await firebaseStorage.get(`evento:${formattedCode}`);
+    const result = await firebaseStorage.get(`event:${formattedCode}`);
     if (result) {
       return JSON.parse(result.value);
     }
@@ -50,7 +50,7 @@ const eventService = {
     const normalizedInput = normalizeAccessCode(formattedCode);
     return eventParticipants.find(
       (participant) =>
-        normalizeAccessCode(participant.codigoAcesso) === normalizedInput
+        normalizeAccessCode(participant.codeAcesso) === normalizedInput
     );
   },
 
@@ -59,7 +59,7 @@ const eventService = {
    */
   async searchEventByParticipantCode(formattedCode, eventList) {
     for (const event of Object.values(eventList)) {
-      const eventParticipants = event.participantes || [];
+      const eventParticipants = event.participants || [];
       const foundParticipant = this.findParticipantByCode(
         eventParticipants,
         formattedCode
@@ -73,42 +73,24 @@ const eventService = {
   },
 
   /**
-   * Helper to check if phone matches.
-   * Supports both obfuscated (new) and plain (legacy) phone storage.
+   * Helper to check if phone matches using hash comparison.
+   * Supports both hashed (new) and legacy phone storage.
    * @param {object|string} participantOrPhone - Participant object or phone string
-   * @param {string} inputPhone - Clean phone digits to match
+   * @param {string} inputPhoneHash - Hash of the input phone to match
    * @returns {boolean}
    */
-  matchesPhoneNumber(participantOrPhone, inputPhone) {
-    // If passed a participant object with celularHash, use that (fastest/most reliable)
+  matchesPhoneHash(participantOrPhone, inputPhoneHash) {
+    // If passed a participant object with mobilePhoneHash, compare hashes
     if (participantOrPhone && typeof participantOrPhone === "object") {
       const participant = participantOrPhone;
-      // celularHash stores plain digits - use it for matching
-      if (participant.celularHash) {
-        const hash = participant.celularHash;
-        return (
-          hash === inputPhone ||
-          hash.endsWith(inputPhone) ||
-          inputPhone.endsWith(hash)
-        );
+      // mobilePhoneHash stores SHA-256 hash - direct comparison
+      if (participant.mobilePhoneHash) {
+        return participant.mobilePhoneHash === inputPhoneHash;
       }
-      // Fall back to celular field
-      const stored = (participant.celular || "").replace(/\D/g, "");
-      return (
-        stored === inputPhone ||
-        stored.endsWith(inputPhone) ||
-        inputPhone.endsWith(stored)
-      );
+      // No hash available - can't match securely
+      return false;
     }
-
-    // Legacy: string phone passed directly (may be obfuscated or plain)
-    const storedPhone = participantOrPhone;
-    const cleanStored = (storedPhone || "").replace(/\D/g, "");
-    return (
-      cleanStored === inputPhone ||
-      cleanStored.endsWith(inputPhone) ||
-      inputPhone.endsWith(cleanStored)
-    );
+    return false;
   },
 
   /**
@@ -118,6 +100,8 @@ const eventService = {
     const cleanedMobileNumber = (mobileNumber || "").replace(/\D/g, "");
     if (!cleanedMobileNumber) return [];
 
+    // Hash the input phone for comparison
+    const inputPhoneHash = await hashPhone(cleanedMobileNumber);
     const matches = [];
 
     // 1. Try phone index
@@ -128,13 +112,13 @@ const eventService = {
         );
         for (const eventCode of codes) {
           try {
-            const result = await firebaseStorage.get(`evento:${eventCode}`);
+            const result = await firebaseStorage.get(`event:${eventCode}`);
             if (!result) continue;
 
             const event = JSON.parse(result.value);
-            const participantsList = event.participantes || [];
+            const participantsList = event.participants || [];
             const participant = participantsList.find((participant) =>
-              this.matchesPhoneNumber(participant, cleanedMobileNumber)
+              this.matchesPhoneHash(participant, inputPhoneHash)
             );
 
             if (participant) {
@@ -162,8 +146,12 @@ const eventService = {
    * Create or Update an event
    */
   async saveEvent(event) {
-    if (!event || !event.codigo) throw new Error("Evento inválido");
-    await firebaseStorage.set(`evento:${event.codigo}`, JSON.stringify(event));
+    if (!event || !event.code) throw new Error("Evento inválido");
+    const persistable = getPersistableEvent(event);
+    await firebaseStorage.set(
+      `event:${event.code}`,
+      JSON.stringify(persistable)
+    );
     return event;
   },
 };

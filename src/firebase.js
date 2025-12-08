@@ -6,7 +6,7 @@ import {
   signInWithPhoneNumber,
 } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
-import { hashPhone, obfuscatePhone, deobfuscatePhone, maskPhone, isObfuscated } from "./utils/crypto.js";
+import { deobfuscatePhone, hashPhone, isObfuscated, maskPhone, obfuscatePhone } from "./utils/crypto.js";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -77,20 +77,20 @@ try {
 }
 
 // Convert storage key to Firebase path
-// Uses hierarchical structure: "eventos/CODIGO" instead of "evento:CODIGO"
+// Uses hierarchical structure: "events/CODIGO" instead of "event:CODIGO"
 const toFirebasePath = (key) => {
-  // Converts "evento:CODIGO" to "eventos/CODIGO"
-  if (key.startsWith("evento:")) {
-    return "eventos/" + key.substring(7);
+  // Converts "event:CODIGO" to "events/CODIGO"
+  if (key.startsWith("event:")) {
+    return "events/" + key.substring(6);
   }
   return key.replace(/:/g, "/");
 };
 
 // Convert Firebase path back to storage key
 const fromFirebasePath = (path) => {
-  // Converts "eventos/CODIGO" to "evento:CODIGO"
-  if (path.startsWith("eventos/")) {
-    return "evento:" + path.substring(8);
+  // Converts "events/CODIGO" to "event:CODIGO"
+  if (path.startsWith("events/")) {
+    return "event:" + path.substring(7);
   }
   return path.replace(/\//g, ":");
 };
@@ -714,8 +714,8 @@ const firebaseStorage = {
     try {
       // With the new security rules, we cannot list the root.
       let basePath = "";
-      if (prefix.startsWith("evento:")) {
-        basePath = "eventos";
+      if (prefix.startsWith("event:")) {
+        basePath = "events";
       }
 
       const dbRef = ref(database, basePath || undefined);
@@ -724,8 +724,8 @@ const firebaseStorage = {
       if (snapshot.exists()) {
         const data = snapshot.val();
         // If we are listing events, the keys are the codes directly
-        if (basePath === "eventos") {
-          const keys = Object.keys(data).map((code) => `evento:${code}`);
+        if (basePath === "events") {
+          const keys = Object.keys(data).map((code) => `event:${code}`);
           return {
             keys: keys,
             prefix: prefix,

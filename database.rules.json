@@ -3,61 +3,16 @@
     ".read": false,
     ".write": false,
 
-    "eventos": {
+    "events": {
       "$eventId": {
         ".read": true,
-
-        ".write": "auth != null",
-        
-        "createdBy": {
-          ".validate": "newData.isString()"
-        },
-        
-        "nome": {
-          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
-        },
-        
-        "codigo": {
-          ".validate": "newData.isString() && newData.val().length <= 50"
-        },
-        
-        "valorSugerido": {
-          ".validate": "!newData.exists() || newData.isString()"
-        },
-        
-        "sorteado": {
-          ".validate": "!newData.exists() || newData.isBoolean()"
-        },
-        
-        "dataEvento": {
-          ".validate": "!newData.exists() || newData.isString()"
-        },
-        
-        "createdAt": {
-          ".validate": "!newData.exists() || newData.isNumber()"
-        }
-        ,
-        "adminParticipantId": {
-          ".write": "auth != null && !data.exists()",
-          ".validate": "newData.isString()"
-        },
-
-        "participantes": {
-          ".write": "auth != null",
-          "$participantId": {
-            ".validate": "newData.hasChildren(['id','nome','celular','codigoAcesso']) && newData.child('id').isString() && newData.child('nome').isString() && newData.child('celular').isString() && newData.child('codigoAcesso').isString()"
-          }
-        }
+        ".write": "auth != null"
       }
-    }
-    ,
+    },
     "phones": {
       "$phone": {
         ".read": true,
-        ".write": "auth != null",
-        "$eventCode": {
-          ".validate": "newData.hasChildren(['updatedAt']) || newData.isNumber() || newData.isString()"
-        }
+        ".write": "auth != null"
       }
     }
   }

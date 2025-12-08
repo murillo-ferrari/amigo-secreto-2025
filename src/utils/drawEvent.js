@@ -8,18 +8,18 @@ export const performSecretSantaDraw = async (
   message
 ) => {
   // Respect event option to include children
-  const includeChildren = currentEvent?.incluirFilhos ?? true;
+  const includeChildren = currentEvent?.includeChildrenOption ?? true;
 
   // Check if there are at least 2 participants (depending on includeChildren)
   let totalParticipants = 0;
-  currentEvent.participantes.forEach((participant) => {
+  currentEvent.participants.forEach((participant) => {
     totalParticipants++;
     if (
       includeChildren &&
-      participant.filhos &&
-      participant.filhos.length > 0
+      participant.children &&
+      participant.children.length > 0
     ) {
-      totalParticipants += participant.filhos.length;
+      totalParticipants += participant.children.length;
     }
   });
 
@@ -43,25 +43,25 @@ export const performSecretSantaDraw = async (
 
   // Create a list of all participants (optionally including children) with their family identifier
   const participantsList = [];
-  currentEvent.participantes.forEach((participant) => {
+  currentEvent.participants.forEach((participant) => {
     participantsList.push({
-      nome: participant.nome,
+      name: participant.name,
       responsavel: participant.id,
     });
     if (
       includeChildren &&
-      participant.filhos &&
-      participant.filhos.length > 0
+      participant.children &&
+      participant.children.length > 0
     ) {
-      participant.filhos.forEach((participantChild) => {
+      participant.children.forEach((participantChild) => {
         // filhos may be strings or objects { nome, presentes }
         const childName =
           typeof participantChild === "string"
             ? participantChild
-            : participantChild && participantChild.nome
-            ? participantChild.nome
+            : participantChild && participantChild.name
+            ? participantChild.name
             : String(participantChild);
-        participantsList.push({ nome: childName, responsavel: participant.id });
+        participantsList.push({ name: childName, responsavel: participant.id });
       });
     }
   });
@@ -116,14 +116,14 @@ export const performSecretSantaDraw = async (
       const selectedReceiver = randomizedReceivers[i];
 
       // Check if drew self
-      if (donorParticipant.nome === selectedReceiver.nome) {
+      if (donorParticipant.name === selectedReceiver.name) {
         isSelfViolation = true;
         violationCount += 100;
       }
 
       // Check if drew from same family (only when not a self-violation)
       if (
-        donorParticipant.nome !== selectedReceiver.nome &&
+        donorParticipant.name !== selectedReceiver.name &&
         donorParticipant.responsavel === selectedReceiver.responsavel
       ) {
         violationCount++;
@@ -135,7 +135,7 @@ export const performSecretSantaDraw = async (
       lowestViolations = violationCount;
       bestAttempt = {};
       for (let i = 0; i < participantsList.length; i++) {
-        bestAttempt[participantsList[i].nome] = randomizedReceivers[i].nome;
+        bestAttempt[participantsList[i].name] = randomizedReceivers[i].name;
       }
     }
 
@@ -215,20 +215,23 @@ export const performSecretSantaDraw = async (
 
   console.log("Draw:", draw);
 
+  // Prepare event object for persistence. Ensure transient UI-only fields
+  // (like `currentParticipant`) are not persisted to the DB.
+  const { _currentParticipant, ...eventWithoutTransient } = currentEvent || {};
   const updatedEvent = {
-    ...currentEvent,
-    sorteado: true,
-    sorteio: draw,
-    dataSorteio: new Date().toISOString(),
+    ...eventWithoutTransient,
+    drawn: true,
+    draw: draw,
+    drawDate: Date.now(),
   };
 
   try {
     await firebaseStorage.set(
-      `evento:${currentEvent.codigo}`,
+      `event:${currentEvent.code}`,
       JSON.stringify(updatedEvent)
     );
     setCurrentEvent(updatedEvent);
-    setEvents({ ...events, [currentEvent.codigo]: updatedEvent });
+    setEvents({ ...events, [currentEvent.code]: updatedEvent });
     if (message?.success) {
       message.success({ message: "Sorteio realizado com sucesso!" });
     }
@@ -243,7 +246,7 @@ export const performSecretSantaDraw = async (
       }
     }
   } catch (error) {
-    console.error("Erro ao salvar sorteio:", error);
+    console.error("Erro ao salvar draw:", error);
     if (message?.error) {
       message.error({ message: "Erro ao realizar sorteio. Tente novamente." });
     }

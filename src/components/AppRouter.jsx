@@ -1,8 +1,8 @@
 import { useEvent } from "../context/EventContext";
 import ErrorScreen from "./common/ErrorScreen";
-import AdminEvento from "./event/EventAdmin";
-import CriarEvento from "./event/EventCreate";
-import Home from "./event/EventHome";
+import EventAdmin from "./event/EventAdmin";
+import EventCreate from "./event/EventCreate";
+import EventHome from "./event/EventHome";
 import EventParticipant from "./event/EventParticipant";
 import SecretSantaResults from "./event/EventResults";
 
@@ -23,16 +23,16 @@ export default function AppRouter() {
 
     switch (view) {
         case "home":
-            return <Home />;
+            return <EventHome />;
         case "criar":
-            return <CriarEvento />;
+            return <EventCreate />;
         case "evento":
             return <EventParticipant />;
         case "admin":
-            return <AdminEvento />;
+            return <EventAdmin />;
         case "resultado":
             return <SecretSantaResults />;
         default:
-            return <Home />;
+            return <EventHome />;
     }
 }
