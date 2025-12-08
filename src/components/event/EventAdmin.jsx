@@ -3,8 +3,7 @@ import { useState } from "react";
 import { useEvent } from "../../context/EventContext";
 import firebaseStorage from "../../firebase";
 import { performSecretSantaDraw } from "../../utils/drawEvent";
-import { calculateTotalParticipants, deobfuscatePhone, formatMobileNumber, isObfuscated, getPersistableEvent } from "../../utils/helpers";
-import CopyButton from "../common/CopyButton";
+import { calculateTotalParticipants, deobfuscatePhone, formatMobileNumber, getPersistableEvent, isObfuscated } from "../../utils/helpers";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
@@ -430,7 +429,7 @@ export default function AdminEvento() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3 items-end">
+                <div className="grid md:grid-cols-2 gap-3 items-end">
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">
                       <strong>Nome:</strong>
@@ -518,17 +517,6 @@ export default function AdminEvento() {
           </div>
 
           <div className="mb-4">
-            {/*  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
-              <p className="text-sm text-gray-800">
-                <strong>Código Participantes</strong>
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold text-blue-600">
-                  {currentEvent.code}
-                </p>
-                <CopyButton text={currentEvent.code} />
-              </div>
-            </div> */}
             <div className="flex justify-center">
               <QRCodeCard
                 url={`${window.location.origin}?code=${currentEvent.code}`}
@@ -538,9 +526,6 @@ export default function AdminEvento() {
               />
             </div>
           </div>
-
-
-
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Users className="w-5 h-5" />

@@ -251,7 +251,8 @@ export default function EventAccessCode({
       {step === "code" && (
         <div className="space-y-3">
           <p className="text-sm text-gray-700 text-center">
-            Digite o código de 6 dígitos enviado para{" "}
+            Digite o código de 6 dígitos enviado para
+            <br />
             <strong>{formatMobileNumber(phoneNumber)}</strong>
           </p>
           <input
