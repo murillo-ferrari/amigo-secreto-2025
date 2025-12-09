@@ -45,28 +45,43 @@ A modern, serverless Secret Santa (Amigo Secreto) web application built with Rea
 | Database   | Firebase Realtime Database |
 | Auth       | Firebase Phone Auth (SMS)  |
 | Hosting    | Firebase Hosting           |
+| Notifications | Sonner                  |
 
 ## 📁 Project Structure
 
 ```
 src/
-├── App.jsx                         # Main app component & view routing
-├── firebase.js                     # Firebase initialization & storage adapter
+├── App.css
+├── App.jsx
+├── main.jsx
+├── version.json                    # App version tracking
+├── firebase.js                     # Firebase initialization
 ├── components/
-│   ├── common/                     # Reusable UI components
+│   ├── AppRouter.jsx               # Main routing configuration
+│   ├── common/
 │   │   ├── CopyButton.jsx          # Copy-to-clipboard button
 │   │   ├── ErrorScreen.jsx         # Database/init error display
 │   │   └── Spinner.jsx             # Loading indicator
-│   ├── event/                      # Event-specific views
+│   ├── event/
+│   │   ├── admin/
+│   │   │   ├── EventAdmin.jsx          # Main admin container
+│   │   │   ├── EventDetailsAdmin.jsx   # Admin: Edit event details
+│   │   │   └── ParticipantListAdmin.jsx # Admin: Manage participants
+│   │   ├── participant/
+│   │   │   └── ChildrenForm.jsx        # Child registration form
 │   │   ├── EventAccessCode.jsx     # SMS verification flow
-│   │   ├── EventAdmin.jsx          # Admin panel (manage participants, run draw)
 │   │   ├── EventCreate.jsx         # Create new event form
-│   │   ├── EventHome.jsx           # Landing page (create/join event)
-│   │   ├── EventParticipant.jsx    # Participant registration form
+│   │   ├── EventHome.jsx           # Landing page
+│   │   ├── EventParticipant.jsx    # Participant registration
 │   │   ├── EventResults.jsx        # Draw results display
-│   │   └── eventQRCode.jsx         # QR code generation & download
-│   ├── layout/                     # Layout components (Header, Footer)
-│   └── message/                    # Toast/modal message system
+│   │   └── eventQRCode.jsx         # QR code generation
+│   ├── layout/
+│   │   ├── Footer.jsx
+│   │   └── Header.jsx
+│   └── message/
+│       ├── ConfirmModal.jsx        # Confirmation dialog
+│       ├── MessageContext.js       # Message context definition
+│       └── MessageProvider.jsx     # Notification system provider (Sonner)
 ├── context/
 │   ├── EventContext.jsx            # Global event state management
 │   └── FirebaseContext.jsx         # Firebase auth context
@@ -75,7 +90,7 @@ src/
 └── utils/
     ├── crypto.js                   # Phone obfuscation/hashing utilities
     ├── drawEvent.js                # Secret Santa draw algorithm
-    └── helpers.js                  # Utility functions (codes, validation, formatting)
+    └── helpers.js                  # Utility functions
 ```
 
 ## 🛠️ Getting Started
