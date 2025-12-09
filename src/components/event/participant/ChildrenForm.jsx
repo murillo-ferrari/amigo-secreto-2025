@@ -57,7 +57,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
 
     return (
         <div className="flex flex-col gap-2 p-4 bg-red-50 rounded-lg border border-red-100">
-            <h3 className="font-semibold text-gray-800">
+            <h3 className="flex gap-2 items-center font-semibold text-gray-800">
                 <span className="bg-red-100 p-1 rounded">🧒</span>
                 Incluir Filhos/Dependentes
             </h3>
