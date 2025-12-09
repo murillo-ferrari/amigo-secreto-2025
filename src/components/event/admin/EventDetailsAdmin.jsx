@@ -40,14 +40,14 @@ export default function EventDetailsAdmin({
     };
 
     return (
-        <div className="flex flex-col bg-white p-2">
-            <p className="text-2xl text-gray-800 font-bold mb-2">
+        <div className="flex flex-col gap-4 bg-white">
+            <p className="text-2xl text-gray-800 font-bold">
                 Painel de Administração
             </p>
 
-            <div className="mb-4 bg-gray-100 border-l-4 border-gray-500 p-4 rounded-lg">
+            <div className="flex flex-col gap-2 bg-gray-100 border-l-4 border-gray-500 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-800 mb-3">
+                    <h3 className="font-semibold text-gray-800">
                         Detalhes do Evento
                     </h3>
                     {!isEditing ? (
@@ -64,10 +64,10 @@ export default function EventDetailsAdmin({
 
                 {!isEditing ? (
                     <div className="text-sm text-gray-600">
-                        <p className="mb-1">
+                        <p>
                             <strong>Nome:</strong> {currentEvent.name}
                         </p>
-                        <p className="mb-1">
+                        <p>
                             <strong>Valor sugerido:</strong>{" "}
                             {currentEvent.suggestedValue
                                 ? `R$ ${currentEvent.suggestedValue}`
@@ -86,7 +86,7 @@ export default function EventDetailsAdmin({
                     </div>
                 ) : (
                     <>
-                        <div className="grid md:grid-cols-2 gap-3 items-end">
+                        <div className="grid grid-cols-1 gap-3 items-end">
                             <div>
                                 <label className="block text-sm text-gray-600 mb-1">
                                     <strong>Nome:</strong>
@@ -138,7 +138,7 @@ export default function EventDetailsAdmin({
                         </div>
                     </>
                 )}
-                <div className="mt-4">
+                <div>
                     <label className="inline-flex items-center gap-2">
                         <input
                             type="checkbox"
@@ -151,14 +151,14 @@ export default function EventDetailsAdmin({
                         </span>
                     </label>
                     {isDrawn && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500">
                             Não é possível alterar após o sorteio.
                         </p>
                     )}
                 </div>
             </div>
 
-            <div className="mb-4">
+            <div className="bg-gray-100 border-l-4 border-gray-300 p-4 rounded-lg">
                 <div className="flex justify-center">
                     <QRCodeCard
                         url={`${window.location.origin}?code=${currentEvent.code}`}

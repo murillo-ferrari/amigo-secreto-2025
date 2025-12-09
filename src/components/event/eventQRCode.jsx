@@ -63,29 +63,31 @@ export default function QRCodeCard({
   };
 
   return (
-    <div className="bg-white border rounded-lg p-4 text-center">
-      <p className="font-semibold text-gray-800 mb-2">{label}</p>
-      <img
-        src={qrSrc}
-        alt="QR Code"
-        width={size}
-        height={size}
-        className="mx-auto mb-3"
-      />
-      <div className="flex items-center justify-center gap-2">
-        <button
-          onClick={downloadQR}
-          disabled={downloading}
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-        >
-          {downloading ? "Baixando..." : "Baixar QR"}
-        </button>
-        <CopyButton
-          text={url}
-          className="px-3 py-2"
-          label="Copiar link"
-          copiedLabel="Link copiado!"
+    <div className="flex flex-col gap-2 w-full rounded-lg text-center">
+      <p className="font-semibold text-gray-800">{label}</p>
+      <div className="flex flex-row gap-2 items-center justify-center">
+        <img
+          src={qrSrc}
+          alt="QR Code"
+          width={size}
+          height={size}
+          className="mx-auto"
         />
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={downloadQR}
+            disabled={downloading}
+            className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          >
+            {downloading ? "Baixando..." : "Baixar QR"}
+          </button>
+          <CopyButton
+            text={url}
+            className="px-3 py-2"
+            label="Copiar link"
+            copiedLabel="Link copiado!"
+          />
+        </div>
       </div>
     </div>
   );

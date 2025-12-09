@@ -458,8 +458,8 @@ export default function EventParticipant() {
 
   const renderRegistrationForm = () => (
     <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="flex flex-col gap-2">
+        <label className="block text-sm font-medium text-gray-700">
           Seu Nome
         </label>
         <input
@@ -471,8 +471,8 @@ export default function EventParticipant() {
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="flex flex-col gap-2">
+        <label className="block text-sm font-medium text-gray-700">
           WhatsApp (com DDD)
         </label>
         <input
@@ -485,11 +485,11 @@ export default function EventParticipant() {
         />
       </div>
 
-      <div className="mb-6 pb-6 border-b">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="flex flex-col gap-2 pb-4 border-b">
+        <label className="block text-sm font-medium text-gray-700">
           Minhas sugestões de presentes
         </label>
-        <div className="flex gap-2 mb-2">
+        <div className="flex gap-2">
           <input
             type="text"
             placeholder="Ex: Livro, camiseta, caneca..."
@@ -552,7 +552,7 @@ export default function EventParticipant() {
       )}
 
       <div>
-        <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
+        <p className="font-semibold text-gray-800 text-sm text-gray-600">
           Participantes:{" "}
           {includeChildren
             ? calculateTotalParticipants(eventParticipants)
@@ -612,7 +612,7 @@ export default function EventParticipant() {
   };
 
   const renderDrawCompletedView = () => (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
         <p className="text-green-800 font-semibold">Sorteio já realizado!</p>
       </div>
@@ -654,7 +654,7 @@ export default function EventParticipant() {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {participantCode && renderSuccessCard()}
         {!participantCode && renderRegistrationForm()}
       </div>
@@ -663,22 +663,22 @@ export default function EventParticipant() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-6">
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
         <Header />
         <button
           onClick={() => updateView("home")}
-          className="mb-4 text-gray-600 hover:text-gray-800"
+          className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <div className="border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800">
             {currentEvent?.name}
           </h2>
 
           {(currentEvent?.suggestedValue || currentEvent?.plannedDrawDate) && (
-            <div className="mb-6 pb-6 border-b">
+            <div className="pb-4 border-b">
               {currentEvent?.suggestedValue && (
                 <p className="text-gray-600">
                   Valor sugerido:{" "}
@@ -688,7 +688,7 @@ export default function EventParticipant() {
                 </p>
               )}
               {currentEvent?.plannedDrawDate && (
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600">
                   Data do sorteio:{" "}
                   <span className="font-bold">
                     {new Date(currentEvent.plannedDrawDate).toLocaleDateString(
@@ -717,7 +717,7 @@ export default function EventParticipant() {
               })();
               return (
                 (isAdminFromCurrentParticipant || isAdminFromUid) && (
-                  <div className="mb-4">
+                  <div>
                     <button
                       onClick={() => updateView("admin")}
                       className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"

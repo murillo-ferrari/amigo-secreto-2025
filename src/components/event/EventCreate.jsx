@@ -82,24 +82,24 @@ export default function CriarEvento() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-6">
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
         <Header />
         <button
           onClick={() => setView("home")}
-          className="mb-4 text-gray-600 hover:text-gray-800"
+          className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
 
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <div className="border border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800">
             Criar Evento
           </h2>
 
           {!createdEvent ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Nome do Evento
                 </label>
                 <input
@@ -111,21 +111,21 @@ export default function CriarEvento() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="flex flex-col gap-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Valor Sugerido (opcional)
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex: 50,00"
+                  placeholder="Ex: R$ 50,00"
                   value={suggestedValue}
                   onChange={(event) => setSuggestedValue(event.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="flex flex-col gap-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Data do Sorteio (opcional)
                 </label>
                 <input
@@ -187,8 +187,8 @@ export default function CriarEvento() {
             </div>
           )}
         </div>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 }

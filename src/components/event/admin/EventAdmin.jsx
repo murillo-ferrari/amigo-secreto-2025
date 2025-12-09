@@ -362,16 +362,16 @@ export default function AdminEvento() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-4xl mx-auto pt-6">
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
         <Header />
         <button
           onClick={() => setView("home")}
-          className="mb-4 text-gray-600 hover:text-gray-800"
+          className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
 
-        <div className="flex flex-col bg-white rounded-lg shadow-lg p-6 mb-4">
+        <div className="border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6">
           <EventDetailsAdmin
             currentEvent={currentEvent}
             isDrawn={isDrawn}
@@ -387,7 +387,7 @@ export default function AdminEvento() {
             displayPhone={displayPhone}
           />
         </div>
-
+        {/* Button to perform draw */}
         {!isDrawn && participants.length >= 2 && (
           <button
             onClick={async () =>
@@ -408,7 +408,7 @@ export default function AdminEvento() {
         )}
 
         {currentEvent.drawn && (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <p className="text-green-800 font-semibold">
                 ✓ Sorteio realizado com sucesso!
@@ -434,8 +434,8 @@ export default function AdminEvento() {
             </div>
           </div>
         )}
-        {/* Excluir o evento */}
-        <div className="mt-4">
+        {/* Button to delete event */}
+        <div>
           <button
             onClick={async () => {
               const deleted = await removeEvent(currentEvent.code);
@@ -443,11 +443,10 @@ export default function AdminEvento() {
             }}
             className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 />
             Excluir Evento
           </button>
         </div>
-
         <Footer />
       </div>
     </div>

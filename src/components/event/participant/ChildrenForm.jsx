@@ -56,17 +56,17 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
     };
 
     return (
-        <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-100">
-            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <span className="bg-red-100 p-1 rounded">👶</span>
+        <div className="flex flex-col gap-2 p-4 bg-red-50 rounded-lg border border-red-100">
+            <h3 className="font-semibold text-gray-800">
+                <span className="bg-red-100 p-1 rounded">🧒</span>
                 Incluir Filhos/Dependentes
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
-                Adicione filhos ou dependentes que participarão do sorteio mas não têm
-                celular próprio.
+            <p className="text-sm text-gray-600">
+                Adicione filhos ou dependentes que participarão do sorteio, mas não têm
+                celular próprio
             </p>
 
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2">
                 <input
                     type="text"
                     placeholder="Nome da criança"
@@ -89,15 +89,15 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                 </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="flex flex-col gap-2">
                 {childrenList.map((child, index) => {
                     const childData = normalizeChild(child);
                     return (
                         <div
                             key={index}
-                            className="bg-white p-3 rounded border border-gray-200"
+                            className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200"
                         >
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center">
                                 <span className="font-semibold text-red-800">
                                     {childData.name}
                                 </span>
@@ -109,8 +109,8 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                                 </button>
                             </div>
 
-                            <div className="pl-2 border-l-2 border-red-100">
-                                <div className="flex gap-2 mb-2">
+                            <div className="flex flex-col gap-2 pl-2 border-l-2 border-red-100">
+                                <div className="flex gap-2">
                                     <input
                                         type="text"
                                         placeholder={`Sugestão de presente para ${childData.name}`}

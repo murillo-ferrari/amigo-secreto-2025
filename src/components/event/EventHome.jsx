@@ -89,7 +89,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-6">
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
         {/* reCAPTCHA container - Firebase requires this element to exist in DOM */}
         {/* Using visibility:hidden keeps it in layout but invisible */}
         <div
@@ -102,7 +102,7 @@ export default function Home() {
         />
         <Header verified={verified} />
 
-        <div className="bg-white rounded-lg shadow-lg p-6 space-y-4">
+        <div className="border bg-white rounded-lg shadow-lg p-6 space-y-4">
           <button
             onClick={() => setView("criar")}
             className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"

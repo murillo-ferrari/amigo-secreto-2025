@@ -26,8 +26,8 @@ export default function ParticipantListAdmin({
     };
 
     return (
-        <div className="mb-6">
-            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <div className="flex flex-col gap-2">
+            <h3 className="flex items-center gap-2 font-semibold text-gray-800">
                 <Users className="w-5 h-5" />
                 Participantes (
                 {includeChildren
@@ -41,7 +41,7 @@ export default function ParticipantListAdmin({
                     Nenhum participante ainda. Compartilhe o código {currentEvent.code}
                 </p>
             ) : (
-                <div className="space-y-3">
+                <div className="flex flex-col gap-2">
                     {(() => {
                         const start = (currentPage - 1) * pageSize;
                         const end = Math.min(start + pageSize, totalParticipants);
@@ -49,20 +49,20 @@ export default function ParticipantListAdmin({
                         return pageItems.map((p) => (
                             <div key={p.id} className="border border-gray-200 rounded-lg p-3">
                                 <div className="flex justify-between items-start mb-2">
-                                    <div className="flex-1">
+                                    <div className="flex flex-col flex-1">
                                         <p className="font-semibold text-gray-800">{p.name}</p>
                                         <p className="text-sm text-gray-600">{displayPhone(p)}</p>
                                         {p.gifts && p.gifts.length > 0 && p.children && p.children.length > 0 && (
-                                            <div className="border-b border-gray-200 mb-2">
-                                                <p className="text-sm text-gray-500 mb-2">
+                                            <div className="border-b border-gray-200 pb-2">
+                                                <p className="text-sm text-gray-500">
                                                     Sugestões: {p.gifts.join(", ")}
                                                 </p>
                                             </div>
                                         )}
                                         {p.children && p.children.length > 0 && (
                                             <div className="mt-2">
-                                                <p className="text-md font-semibold text-gray-700 mb-1">Filhos:</p>
-                                                <div className="pl-3 border-l-2 border-gray-200 space-y-2">
+                                                <p className="text-md font-semibold text-gray-700">Filhos:</p>
+                                                <div className="pl-3 border-l-2 border-gray-200">
                                                     {p.children.map((child, idx) => {
                                                         const name = typeof child === "string" ? child : child.name;
                                                         const gifts = (typeof child !== "string" && child.gifts) ? child.gifts : [];
@@ -109,7 +109,7 @@ export default function ParticipantListAdmin({
                                 </div>
 
                                 {isDrawn && (
-                                    <div className="space-y-1 pt-2 border-t">
+                                    <div className="flex flex-col border-t pt-2">
                                         <div className="flex justify-between items-center">
                                             <p className="text-sm">
                                                 <strong>{p.name}</strong> tirou{" "}

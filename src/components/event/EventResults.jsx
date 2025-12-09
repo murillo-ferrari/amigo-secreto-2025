@@ -13,6 +13,7 @@ export default function SecretSantaResults() {
     currentUid,
   } = useEvent();
 
+  const verified = !!currentUid;
   const currentParticipant = currentEvent?.currentParticipant;
   const participantAccessCode = currentParticipant?.codeAcesso || "";
   const eventSuccessMessage =
@@ -62,24 +63,24 @@ export default function SecretSantaResults() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-6">
-        <Header />
+      <div className="flex flex-col gap-4 max-w-md mx-auto">
+        <Header verified={verified} />
         <button
           onClick={() => {
             setView("home");
             updateCurrentEvent(null);
             updateAccessCode("");
           }}
-          className="mb-4 text-gray-600 hover:text-gray-800"
+          className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
         </button>
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        <div className="border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6 text-center">
+          <h2 className="text-2xl font-bold text-gray-800">
             {currentEvent.name}
           </h2>
           {(currentEvent.suggestedValue || currentEvent.drawDate) && (
-            <div className="mb-6 pb-6 border-b">
+            <div className="pb-4 border-b">
               {currentEvent.suggestedValue && (
                 <p className="text-gray-600">
                   Valor sugerido:{" "}
@@ -89,7 +90,7 @@ export default function SecretSantaResults() {
                 </p>
               )}
               {currentEvent.drawDate && (
-                <p className="text-gray-600 mt-1">
+                <p className="text-gray-600">
                   Sorteio realizado em:{" "}
                   <span className="font-bold">
                     {new Date(currentEvent.drawDate).toLocaleDateString('pt-BR')}
@@ -112,7 +113,7 @@ export default function SecretSantaResults() {
               );
             })();
             return (isAdminFromCurrentParticipant || isAdminFromUid) && (
-              <div className="mb-6 pb-6 border-b">
+              <div className="pb-4 border-b">
                 <button
                   onClick={() => setView("admin")}
                   className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700"
@@ -124,21 +125,23 @@ export default function SecretSantaResults() {
           })()
           }
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <div className="text-left text-xl">
               <p>
                 Olá, <span className="font-bold">{currentParticipant.name}</span>!
               </p>
-              {/* <p className="text-sm mt-1">Abaixo está seu amigo secreto e as sugestões de presente.</p> */}
+              {currentEvent.draw[currentParticipant.name] && (
+                <p className="text-sm">Abaixo está seu amigo secreto e as sugestões de presente.</p>
+              )}
             </div>
             <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-              <p className="text-sm text-gray-600 mb-2">Seu amigo secreto é:</p>
+              <p className="text-sm text-gray-600">Seu amigo secreto é:</p>
               <p className="text-3xl font-bold text-red-600">
                 {normalizeName(currentEvent.draw[currentParticipant.name])}
               </p>
               {frindGifts.length > 0 && (
-                <div className="mt-3 text-left">
-                  <p className="text-sm text-gray-700 mb-1">
+                <div className="text-left">
+                  <p className="text-sm text-gray-700">
                     Sugestões de presente do seu amigo:
                   </p>
                   <ul className="list-disc list-inside text-sm text-gray-700">
@@ -172,15 +175,15 @@ export default function SecretSantaResults() {
                     key={childName}
                     className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4"
                   >
-                    <p className="text-sm text-gray-600 mb-2">
+                    <p className="text-sm text-gray-600">
                       Amigo secreto de <b>{childName}</b>:
                     </p>
                     <p className="text-2xl font-bold text-blue-600">
                       {childFriendName}
                     </p>
                     {childFriendGift.length > 0 && (
-                      <div className="mt-3 text-left">
-                        <p className="text-sm text-gray-700 mb-1">
+                      <div className="text-left">
+                        <p className="text-sm text-gray-700">
                           Sugestões do amigo:
                         </p>
                         <ul className="list-disc list-inside text-sm text-gray-700">
@@ -195,8 +198,8 @@ export default function SecretSantaResults() {
               })}
           </div>
         </div>
+        <Footer />
       </div>
-      <Footer />
     </div>
   );
 }
