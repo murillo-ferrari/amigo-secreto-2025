@@ -41,7 +41,8 @@ export const EventProvider = ({ children }) => {
                     setStorageError(firebaseStorage.initError);
                     return;
                 }
-                await loadEvents();
+                // Removed loadEvents() as listing is restricted by security rules.
+                // We rely on direct lookups by code.
 
                 // Check URL params
                 const urlQueryParams = new URLSearchParams(window.location.search);
@@ -65,19 +66,6 @@ export const EventProvider = ({ children }) => {
             if (unsubscribe) unsubscribe();
         };
     }, []);
-
-    const loadEvents = async () => {
-        setLoading(true);
-        try {
-            const events = await eventService.listEvents();
-            setEventList(events);
-        } catch (error) {
-            console.error("Error loading events:", error);
-            setStorageError(error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const _handleAdminAccess = (foundEvent) => {
         setCurrentEvent(foundEvent);
@@ -278,8 +266,7 @@ export const EventProvider = ({ children }) => {
         setGifts,
         fetchEventByCode,
         retrieveParticipantByPhone,
-        recoverParticipantInEvent,
-        loadEvents
+        recoverParticipantInEvent
     };
 
     return (

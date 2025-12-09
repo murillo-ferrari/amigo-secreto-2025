@@ -297,6 +297,7 @@ export default function EventParticipant() {
         // Set createdByUid on the event for direct ownership check
         if (newParticipant.createdByUid) {
           updatedEvent.createdByUid = newParticipant.createdByUid;
+          updatedEvent.adminUid = newParticipant.createdByUid;
         }
       }
     }
@@ -559,55 +560,34 @@ export default function EventParticipant() {
             : eventParticipants.length}
           {hasChildren ? ", incluindo filhos" : ""}
         </p>
-        <div className="space-y-1">
+        <ul className="grid grid-cols-2 gap-1 list-disc pl-5">
           {eventParticipants
             .slice()
             .sort((a, b) =>
               a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
             )
             .map(renderParticipantListItem)}
-        </div>
+        </ul>
       </div>
     </>
   );
 
   const renderParticipantListItem = (participant) => {
-    const childrenNames = includeChildren
-      ? participant.children?.map((f) => (typeof f === "string" ? f : f.name)) ||
-      []
-      : [];
-    const hasGifts = participant.gifts?.length > 0;
-    const hasChildGifts =
-      includeChildren &&
-      participant.children?.some(
-        (f) => typeof f !== "string" && f.gifts?.length > 0
-      );
+    const childrenList = includeChildren ? participant.children || [] : [];
 
     return (
-      <div key={participant.id} className="text-sm text-gray-700">
+      <li key={participant.id} className="font-medium text-sm text-gray-600">
         {participant.name}
-        {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
 
-        {hasGifts && (
-          <div className="text-xs text-gray-500 mt-1">
-            Sugestões: {participant.gifts.join(", ")}
-          </div>
-        )}
-
-        {hasChildGifts && (
-          <div className="text-xs text-gray-500 mt-1">
-            {participant.children.map((child, i) => {
-              const normalized = normalizeChild(child);
-              return normalized.gifts.length > 0 ? (
-                <div key={i}>
-                  Sugestões ({normalized.name}):{" "}
-                  {normalized.gifts.join(", ")}
-                </div>
-              ) : null;
+        {childrenList.length > 0 && (
+          <ul className="list-[circle] pl-5 text-gray-600 font-normal">
+            {childrenList.map((child, i) => {
+              const childName = typeof child === "string" ? child : child.name;
+              return <li key={i}>{childName}</li>;
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </li>
     );
   };
 

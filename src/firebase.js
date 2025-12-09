@@ -4,6 +4,7 @@ import {
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signInAnonymously,
 } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
 import { deobfuscatePhone, hashPhone, isObfuscated, maskPhone, obfuscatePhone } from "./utils/crypto.js";
@@ -97,15 +98,34 @@ const fromFirebasePath = (path) => {
 
 // Helper to wait for authentication before operations
 const waitForAuth = async () => {
-  if (authReady) return true;
+  // Wait for initial initialization
   if (authReadyPromise) {
     try {
       await authReadyPromise;
-      return true;
     } catch {
+      // Ignore init errors, we might still try to auth
+    }
+  }
+
+  // If already authenticated, return true
+  if (auth?.currentUser) return true;
+
+  // Attempt anonymous authentication for unauthenticated users
+  // This is required for creating events with strict security rules
+  if (auth) {
+    try {
+      await signInAnonymously(auth);
+      return true;
+    } catch (error) {
+      console.warn(
+        "Auto-authentication failed (Anonymous Auth might be disabled in Firebase Console):",
+        error
+      );
+      // Proceed without auth - rules might block writes, but reads might work
       return false;
     }
   }
+
   return false;
 };
 
@@ -502,12 +522,9 @@ const getEventCodeByPhone = async (phone) => {
 };
 
 const getEventCodesByPhone = async (phone) => {
-  // Return all event codes associated with a phone (new multi-mapping format).
+  // Return all event codes associated with a phone.
   if (!database) return [];
   await waitForAuth();
-
-  const currentUserUid = auth?.currentUser?.uid;
-  if (!currentUserUid) return [];
 
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return [];
@@ -524,17 +541,16 @@ const getEventCodesByPhone = async (phone) => {
     if (!snapshot.exists()) return [];
     const data = snapshot.val();
 
-    // Filter to ensure we only return events owned by this user
-    // This prevents index pollution/spoofing
+    // Legacy Support: Old single mapping format
+    if (data && data.eventCode) {
+      return [data.eventCode];
+    }
+
+    // New mapping: keys are event codes.
+    // We return all keys associated with this phone hash. 
+    // This supports recovery across sessions (where UID might differ) and legacy data.
     if (data && typeof data === "object") {
-      return Object.entries(data)
-        .filter(([key, val]) => {
-          // Skip legacy/malformed data that isn't an object
-          if (!val || typeof val !== "object") return false;
-          // Strict check: entry must belong to current user
-          return val.uid === currentUserUid;
-        })
-        .map(([key]) => key);
+      return Object.keys(data);
     }
 
     return [];

@@ -1,3 +1,4 @@
+import { Copy } from 'lucide-react';
 import { useState } from "react";
 import CopyButton from "../common/CopyButton";
 import { useMessage } from "../message/MessageContext";
@@ -74,6 +75,20 @@ export default function QRCodeCard({
           className="mx-auto"
         />
         <div className="flex flex-col gap-2">
+          <div className="flex flex-col items-center justify-center p-2 bg-gray-50 rounded border border-gray-200">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Código do Evento</p>
+            <div className="flex items-center gap-2">
+              <p className="text-2xl font-bold text-gray-800 tracking-widest">
+                {url.split("=").pop()}
+              </p>
+              <CopyButton
+                text={url.split("=").pop()}
+                className="p-1.5 h-auto w-auto bg-transparent hover:bg-gray-200 text-gray-600"
+                label={<Copy size={16} />}
+                copiedLabel={<Copy size={16} className="text-green-600" />}
+              />
+            </div>
+          </div>
           <button
             onClick={downloadQR}
             disabled={downloading}

@@ -14,6 +14,10 @@ export default function CriarEvento() {
     setEventList: updateEventList,
     setCurrentEvent: updateCurrentEvent,
     setPendingAdminEvent,
+    setParticipantName,
+    setParticipantMobileNumber,
+    setParticipantChildren,
+    setGifts,
   } = useEvent();
 
   const [eventName, setEventName] = useState("");
@@ -176,6 +180,12 @@ export default function CriarEvento() {
                 <div className="flex gap-2 justify-center">
                   <button
                     onClick={() => {
+                      // Clear participant form state to prevent leakage from previous events
+                      setParticipantName("");
+                      setParticipantMobileNumber("");
+                      setParticipantChildren([]);
+                      setGifts([]);
+
                       // Proceed to create the first participant (admin)
                       if (setPendingAdminEvent)
                         setPendingAdminEvent(createdEvent.code);
