@@ -1,27 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Toaster, toast } from "sonner";
 import ConfirmModal from "./ConfirmModal";
 import { MessageContext } from "./MessageContext";
-import Toasts from "./Toasts";
 
 export function MessageProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
   const [confirmState, setConfirmState] = useState(null);
 
   const notify = useCallback(
     ({ type = "info", title, message, duration = 5000 }) => {
-      const id = Date.now() + Math.random();
-      setToasts((toastsArray) => [
-        ...toastsArray,
-        { id, type, title, message, duration },
-      ]);
-      return id;
+      const options = {
+        description: message,
+        duration,
+      };
+
+      switch (type) {
+        case "success":
+          return toast.success(title, options);
+        case "error":
+          return toast.error(title, options);
+        case "warn":
+        case "warning":
+          return toast.warning(title, options);
+        case "info":
+        default:
+          return toast.info(title, options);
+      }
     },
     []
   );
-
-  const removeToast = useCallback((id) => {
-    setToasts((toastsArray) => toastsArray.filter((x) => x.id !== id));
-  }, []);
 
   const confirm = useCallback(
     ({
@@ -66,7 +72,7 @@ export function MessageProvider({ children }) {
   return (
     <MessageContext.Provider value={api}>
       {children}
-      <Toasts toasts={toasts} onRemove={removeToast} />
+      <Toaster position="top-right" richColors />
       <ConfirmModal
         open={!!confirmState}
         {...confirmState}

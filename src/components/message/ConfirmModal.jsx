@@ -17,15 +17,21 @@ export default function ConfirmModal({
   // Handle mounting/unmounting
   useEffect(() => {
     if (open) {
-      const timer = setTimeout(() => setShouldRender(true), 0);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        setShouldRender(true);
+      }, 0);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
       // Delay unmount to allow exit animation
       const timer = setTimeout(() => {
         setShouldRender(false);
       }, DURATION);
 
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     }
   }, [open]);
 
@@ -36,11 +42,16 @@ export default function ConfirmModal({
       const timer = setTimeout(() => {
         setIsVisible(true);
       }, 10);
-
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
-      const timer = setTimeout(() => setIsVisible(false), 0);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 0);
+      return () => {
+        clearTimeout(timer);
+      };
     }
   }, [shouldRender, open]);
 
@@ -65,7 +76,7 @@ export default function ConfirmModal({
     }
 
     if (isExiting) {
-      return "opacity-0 translate-x-0 scale-100"; // Fade out, keep position
+      return "opacity-0 translate-x-0 scale-50"; // Fade out, keep position
     }
 
     // Entering or initial - slide from right
@@ -106,13 +117,13 @@ export default function ConfirmModal({
             {title}
           </h3>
         )}
-        
+
         {message && (
           <p id="confirm-message" className="mt-3 text-sm text-gray-600 leading-relaxed">
             {message}
           </p>
         )}
-        
+
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
