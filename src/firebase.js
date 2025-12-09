@@ -177,7 +177,7 @@ const createRecaptcha = async (
     ) {
       try {
         window.grecaptcha.reset(recaptchaWidgetId);
-        console.log("Reset grecaptcha widget:", recaptchaWidgetId);
+        // console.log("Reset grecaptcha widget:", recaptchaWidgetId);
       } catch (e) {
         console.warn("Error resetting grecaptcha widget:", e);
       }
@@ -187,7 +187,7 @@ const createRecaptcha = async (
     if (recaptchaVerifier) {
       try {
         recaptchaVerifier.clear();
-        console.log("Cleared Firebase recaptchaVerifier");
+        // console.log("Cleared Firebase recaptchaVerifier");
       } catch (e) {
         console.warn("Error clearing previous reCAPTCHA:", e);
       }
@@ -206,18 +206,18 @@ const createRecaptcha = async (
       newContainer.style.overflow = "hidden";
       parent.replaceChild(newContainer, container);
       container = newContainer;
-      console.log("Replaced container element for fresh reCAPTCHA");
+      // console.log("Replaced container element for fresh reCAPTCHA");
     } else {
       // Fallback: just clear innerHTML
       container.innerHTML = "";
     }
 
-    console.log("Creating RecaptchaVerifier with:", {
+    /* console.log("Creating RecaptchaVerifier with:", {
       containerId,
       size,
       authExists: !!auth,
       authCurrentUser: auth?.currentUser?.uid || "none",
-    });
+    }); */
 
     // Create RecaptchaVerifier following Firebase v9+ modular API
     // Signature: new RecaptchaVerifier(auth, containerOrId, parameters)
@@ -225,20 +225,20 @@ const createRecaptcha = async (
       size: size,
       callback: () => {
         // reCAPTCHA solved - will proceed with signInWithPhoneNumber
-        console.log("reCAPTCHA solved successfully");
+        // console.log("reCAPTCHA solved successfully");
       },
       "expired-callback": () => {
         // Response expired - ask user to solve reCAPTCHA again
-        console.log("reCAPTCHA expired, need to re-verify");
+        // console.log("reCAPTCHA expired, need to re-verify");
       },
     });
 
     // Pre-render the reCAPTCHA
     recaptchaWidgetId = await recaptchaVerifier.render();
-    console.log(
+    /* console.log(
       "reCAPTCHA rendered successfully, widget ID:",
       recaptchaWidgetId
-    );
+    ); */
 
     return recaptchaVerifier;
   } catch (error) {
@@ -310,7 +310,7 @@ const sendPhoneVerification = async (phone) => {
     }
   }
 
-  console.log("Sending verification to:", phoneE164);
+  // console.log("Sending verification to:", phoneE164);
 
   // ALWAYS clear and recreate reCAPTCHA to avoid stale widget references
   // This is necessary because React may have unmounted/remounted the container
@@ -342,7 +342,7 @@ const sendPhoneVerification = async (phone) => {
       phoneE164,
       recaptchaVerifier
     );
-    console.log("Verification code sent successfully");
+    // console.log("Verification code sent successfully");
     return true;
   } catch (error) {
     console.error("sendPhoneVerification error:", error);
@@ -377,7 +377,7 @@ const confirmPhoneCode = async (code) => {
             JSON.stringify(verifiedPhones)
           );
         }
-        console.log("Phone verified and cached in session (hashed)");
+        // console.log("Phone verified and cached in session (hashed)");
       }
     } catch (err) {
       console.warn("Failed to save verified phone to sessionStorage:", err);

@@ -123,8 +123,12 @@ export default function AdminEvento() {
       ...currentEvent,
       name: nameTrim,
       suggestedValue: suggestedValue || undefined,
+      /* Planned draw date is a timestamp with midday hour */
       plannedDrawDate: plannedDrawDate
-        ? new Date(plannedDrawDate).getTime()
+        ? (() => {
+            const [y, m, d] = plannedDrawDate.split("-");
+            return new Date(y, m - 1, d, 12, 0, 0).getTime();
+          })()
         : null,
     };
 

@@ -104,38 +104,45 @@ export default function Home() {
         <Header verified={verified} />
 
         <div className="border bg-white rounded-lg shadow-lg p-6 space-y-4">
-          {loading ? (
+          {/* Show Spinner only if loading AND NOT in phone verification flow (which handles its own loading) */}
+          {loading && !triggerAccess ? (
             <div className="flex items-center justify-center py-8">
               <Spinner />
             </div>
           ) : (
             <>
-              <button
-                onClick={() => setView("criar")}
-                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
-              >
-                Criar Novo Evento
-              </button>
+              {!triggerAccess && (
+                <button
+                  onClick={() => setView("criar")}
+                  className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
+                >
+                  Criar Novo Evento
+                </button>
+              )}
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
+              {!triggerAccess && (
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">ou</span>
+                  </div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">ou</span>
-                </div>
-              </div>
+              )}
 
               <div>
-                <input
-                  type="text"
-                  placeholder="Código do evento / celular (com DDD)"
-                  value={eventAccessCode}
-                  onChange={handleInputChange}
-                  maxLength={15}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
-                  disabled={triggerAccess}
-                />
+                {!triggerAccess && (
+                  <input
+                    type="text"
+                    placeholder="Código do evento / celular (com DDD)"
+                    value={eventAccessCode}
+                    onChange={handleInputChange}
+                    maxLength={15}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
+                  />
+                )}
+                
                 {!triggerAccess && (
                   <button
                     onClick={handleAccessClick}

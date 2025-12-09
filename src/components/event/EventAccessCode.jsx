@@ -22,10 +22,14 @@ export default function EventAccessCode({
 
   // When parent triggers access, start the SMS flow
   useEffect(() => {
-    if (triggerAccess && phoneNumber) {
+    let mounted = true;
+    
+    if (triggerAccess && phoneNumber && mounted) {
       handleStartSmsVerification();
     }
+    
     return () => {
+      mounted = false;
       if (firebase?.clearRecaptcha) {
         firebase.clearRecaptcha();
       }
@@ -46,13 +50,13 @@ export default function EventAccessCode({
   };
 
   const handleStartSmsVerification = async () => {
-    console.log("=== handleStartSmsVerification started ===");
-    console.log("phoneNumber:", phoneNumber);
+    /* console.log("=== handleStartSmsVerification started ===");
+    console.log("phoneNumber:", phoneNumber); */
 
     // Validate phone
     const valid = verifyMobileNumber(phoneNumber);
     if (!valid.isValid) {
-      console.log("Phone validation failed:", valid.errorMessage);
+      // console.log("Phone validation failed:", valid.errorMessage);
       setError(valid.errorMessage);
       if (message?.error) message.error({ message: valid.errorMessage });
       return;
@@ -63,24 +67,27 @@ export default function EventAccessCode({
 
     // Check if this phone was already verified in the current session
     const isVerifiedInSession = firebase?.isPhoneVerifiedInSession && await firebase.isPhoneVerifiedInSession(phoneNumber);
-    console.log("isPhoneVerifiedInSession:", isVerifiedInSession);
+    // console.log("isPhoneVerifiedInSession:", isVerifiedInSession);
 
     if (isVerifiedInSession) {
-      console.log("Phone already verified in session, skipping SMS verification");
-      setStep("searching");
-      await performSearch();
+      // console.log("Phone already verified in session, skipping SMS verification");
+      // Only proceed to search if we are not already searching or showing results
+      if (step !== "searching" && step !== "results") {
+        setStep("searching");
+        await performSearch();
+      }
       return;
     }
 
-    console.log("Phone NOT in session cache, proceeding with SMS verification...");
+    // console.log("Phone NOT in session cache, proceeding with SMS verification...");
     setStep("sending");
 
     try {
-      console.log("firebase?.sendPhoneVerification exists:", !!firebase?.sendPhoneVerification);
+      // console.log("firebase?.sendPhoneVerification exists:", !!firebase?.sendPhoneVerification);
       if (firebase?.sendPhoneVerification) {
-        console.log("Calling sendPhoneVerification...");
+        // console.log("Calling sendPhoneVerification...");
         await firebase.sendPhoneVerification(phoneNumber);
-        console.log("SMS sent successfully, showing code input");
+        // console.log("SMS sent successfully, showing code input");
         setStep("code");
       } else {
         // Phone Auth not available - skip verification and go directly to search

@@ -541,7 +541,7 @@ export default function EventParticipant() {
         {findExistingParticipant() ? "Atualizar Cadastro" : "Cadastrar"}
       </button>
 
-      {currentEvent && !isDrawComplete && participantName === "" && (
+      {currentEvent && !isDrawComplete && (
         <div className="py-4">
           <QRCodeCard
             url={`${window.location.origin}?code=${currentEvent.code}`}
@@ -683,20 +683,43 @@ export default function EventParticipant() {
           {/* Show admin access button when the current logged-in participant is the admin */}
           {accessedViaParticipantCode &&
             (() => {
-              const isAdminFromCurrentParticipant = !!(
+              // Check if current session participant is admin
+              const _isAdminFromCurrentParticipant = !!(
                 currentEvent?.currentParticipant &&
                 currentEvent.currentParticipant.isAdmin
               );
-              const isAdminFromUid = (() => {
+
+              // Check if authenticated user created the event (Firebase Auth UID)
+              const isEventCreator =
+                currentUid &&
+                currentEvent?.createdByUid &&
+                currentEvent.createdByUid === currentUid;
+
+              // Check if authenticated user owns any admin participant (fallback for older events)
+              const isAdminParticipantOwner = (() => {
                 if (!currentUid) return false;
+                
+                // If active session exists, prioritize its admin status
+                if (currentEvent?.currentParticipant) {
+                   return currentEvent.currentParticipant.isAdmin;
+                }
+
+                // Otherwise, check if user owns any admin participant record
                 const parts = currentEvent?.participants || [];
-                return parts.some(
-                  (p) =>
-                    p.isAdmin && p.createdByUid && p.createdByUid === currentUid
-                );
+                return parts
+                  .filter((p) => p.createdByUid === currentUid)
+                  .some((p) => p.isAdmin);
               })();
+
+              // Logic: Prioritize active session context.
+              // If a specific participant is logged in, trust their admin status.
+              // Fallback to UID ownership only if no specific participant context exists.
+              const showAdminButton = currentEvent?.currentParticipant 
+                ? currentEvent.currentParticipant.isAdmin
+                : (isEventCreator || isAdminParticipantOwner);
+
               return (
-                (isAdminFromCurrentParticipant || isAdminFromUid) && (
+                showAdminButton && (
                   <div>
                     <button
                       onClick={() => updateView("admin")}
