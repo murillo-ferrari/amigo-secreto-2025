@@ -139,28 +139,7 @@ export const EventProvider = ({ children }) => {
                 return;
             }
 
-            // 2. Search in loaded events (for participant codes)
-            const { foundEvent: searchEvent, foundParticipant } = await eventService.searchEventByParticipantCode(formattedCode, eventList);
-
-            if (!searchEvent) {
-                message.error({ message: "Código não encontrado! Se você está usando um código de participante, primeiro acesse usando o código do evento." });
-                return;
-            }
-
-            // Check if admin (removed in original code, but logic structure remains)
-            // Assuming no separate admin code for now based on original App.jsx comments
-
-            if (foundParticipant && searchEvent.drawn) {
-                handleExistingParticipantWithDraw(searchEvent, foundParticipant);
-                return;
-            }
-
-            if (foundParticipant) {
-                handleExistingParticipantNoDraw(searchEvent, foundParticipant);
-                return;
-            }
-
-            handleNewParticipant(searchEvent);
+            message.error({ message: "Evento não encontrado. Verifique o código e tente novamente." });
 
         } catch (error) {
             console.error("Error accessing event:", error);
