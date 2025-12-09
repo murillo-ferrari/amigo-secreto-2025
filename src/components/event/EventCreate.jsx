@@ -58,8 +58,12 @@ export default function CriarEvento() {
         e
       );
     }
+
+    const currentUserId = firebaseStorage.getCurrentUserUid();
     eventToSave.createdAt = Date.now();
+    eventToSave.adminUid = currentUserId;
     newEventRecord.createdAt = eventToSave.createdAt;
+    newEventRecord.adminUid = currentUserId;
 
     try {
       await firebaseStorage.set(

@@ -6,13 +6,15 @@
     "events": {
       "$eventId": {
         ".read": true,
-        ".write": "auth != null"
+        ".write": "auth != null && ((!data.exists() && newData.child('adminUid').val() === auth.uid) || (data.exists() && data.child('adminUid').val() === auth.uid))"
       }
     },
     "phones": {
       "$phone": {
-        ".read": true,
-        ".write": "auth != null"
+        ".read": "auth != null",
+        "$eventCode": {
+          ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid) && (!newData.exists() || newData.child('uid').val() === auth.uid)"
+        }
       }
     }
   }

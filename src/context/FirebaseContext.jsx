@@ -6,7 +6,6 @@ const FirebaseContext = createContext(null);
 
 /**
  * Hook to access Firebase storage functions.
- * Replaces the window.storage global pattern.
  */
 export function useFirebase() {
     const context = useContext(FirebaseContext);
@@ -29,3 +28,4 @@ export function FirebaseProvider({ children }) {
 
 // Also export the storage directly for use in non-React contexts (services, utils)
 export { firebaseStorage };
+

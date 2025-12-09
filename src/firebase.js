@@ -432,7 +432,10 @@ const setPhoneIndex = async (phone, eventCode) => {
     // Store under phones/{hashedPhone}/{eventCode} so a single phone can map to multiple events
     const phonePath = `phones/${phoneHash}/${eventCode}`;
     const dbRef = ref(database, phonePath);
-    await set(dbRef, { updatedAt: Date.now() });
+    await set(dbRef, {
+      updatedAt: Date.now(),
+      uid: auth?.currentUser?.uid || null
+    });
   } catch (error) {
     console.warn("Error creating phone index:", error);
     // Non-critical error - don't throw
@@ -503,6 +506,9 @@ const getEventCodesByPhone = async (phone) => {
   if (!database) return [];
   await waitForAuth();
 
+  const currentUserUid = auth?.currentUser?.uid;
+  if (!currentUserUid) return [];
+
   const normalizedPhone = normalizePhone(phone);
   if (!normalizedPhone) return [];
 
@@ -518,14 +524,17 @@ const getEventCodesByPhone = async (phone) => {
     if (!snapshot.exists()) return [];
     const data = snapshot.val();
 
-    // Old single mapping
-    if (data && typeof data === "object" && data.eventCode) {
-      return [data.eventCode];
-    }
-
-    // New mapping: keys are event codes
+    // Filter to ensure we only return events owned by this user
+    // This prevents index pollution/spoofing
     if (data && typeof data === "object") {
-      return Object.keys(data);
+      return Object.entries(data)
+        .filter(([key, val]) => {
+          // Skip legacy/malformed data that isn't an object
+          if (!val || typeof val !== "object") return false;
+          // Strict check: entry must belong to current user
+          return val.uid === currentUserUid;
+        })
+        .map(([key]) => key);
     }
 
     return [];
@@ -535,7 +544,7 @@ const getEventCodesByPhone = async (phone) => {
   }
 };
 
-// Adapts the API to be compatible with window.storage
+// Exposes the storage API for those who need to wait
 const firebaseStorage = {
   // Exposes the auth promise for those who need to wait
   waitForAuth,
@@ -757,8 +766,6 @@ const firebaseStorage = {
 if (typeof window !== "undefined") {
   firebaseStorage.initError = initError;
   firebaseStorage.isAvailable = !!database;
-  // NOTE: window.storage is no longer assigned here.
-  // Components should import firebaseStorage directly or use useFirebase() hook.
 }
 
 export default firebaseStorage;
