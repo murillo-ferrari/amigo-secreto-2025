@@ -26,6 +26,9 @@ export default function AdminEvento() {
   } = useEvent();
 
   const message = useMessage();
+
+  if (!currentEvent) return null;
+
   const participants = currentEvent?.participants || [];
   const hasAnyFilhos = participants.some(
     (p) => p.children && p.children.length > 0
@@ -318,9 +321,39 @@ export default function AdminEvento() {
     });
     if (!confirmed) return false;
 
+    // 1. Clean up phone indexes for all participants
+    // This allows them to stop seeing the deleted event in their list
     try {
-      if (firebaseStorage && firebaseStorage.remove) {
-        await firebaseStorage.remove(`event:${eventCode}`);
+      const participants = currentEvent.participants || [];
+      const promises = participants.map(async (participant) => {
+        let phone = participant.mobilePhone;
+        if (!phone) return;
+
+        // Deobfuscate if valid
+        if (isObfuscated(phone)) {
+          const key = currentEvent.code + participant.id;
+          try {
+            phone = deobfuscatePhone(phone, key);
+          } catch (error) {
+            console.warn("Deobfuscation failed for cleanup", error);
+            return;
+          }
+        }
+
+        const digits = (phone || "").replace(/\D/g, "");
+        if (digits && firebaseStorage.removePhoneIndex) {
+          await firebaseStorage.removePhoneIndex(digits, eventCode);
+        }
+      });
+
+      await Promise.all(promises);
+    } catch (error) {
+      console.warn("Failed to cleanup some phone indexes (non-critical):", error);
+    }
+
+    try {
+      if (firebaseStorage && firebaseStorage.delete) {
+        await firebaseStorage.delete(`event:${eventCode}`);
       }
       message.success({ message: "Evento excluído com sucesso!" });
       updateCurrentEvent(null);
