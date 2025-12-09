@@ -10,14 +10,16 @@ import {
   getPersistableEvent,
   hashPhone,
   isObfuscated,
+  normalizeChild,
   obfuscatePhone,
-  verifyMobileNumber
+  verifyMobileNumber,
 } from "../../utils/helpers";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import QRCodeCard from "./eventQRCode";
+import ChildrenForm from "./participant/ChildrenForm";
 
 export default function EventParticipant() {
   // Get all state from context instead of props
@@ -43,8 +45,6 @@ export default function EventParticipant() {
   } = useEvent();
 
   const [newGift, updateNewGift] = useState("");
-  const [childrenNewGift, updateChildrenGift] = useState({});
-  const [childName, updateChildName] = useState("");
   const [participantCode, updateParticipantCode] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [eventParticipantId, updateEventParticipantId] = useState("");
@@ -60,62 +60,6 @@ export default function EventParticipant() {
   const handleCelularChange = (e) => {
     const valorFormatado = formatMobileNumber(e.target.value);
     updateParticipantPhone(valorFormatado);
-  };
-
-  // ===== Children Management =====
-  const normalizeChild = (child) => {
-    if (typeof child === "string") {
-      return { name: child, gifts: [] };
-    }
-    return { name: child.name, gifts: child.gifts || [] };
-  };
-
-  const addParticipantChild = () => {
-    if (!childName.trim()) return;
-
-    updateParticipantsChildren([
-      ...participantsChildren,
-      { name: childName.trim(), gifts: [] },
-    ]);
-    updateChildName("");
-  };
-
-  const removeParticipantChild = (index) => {
-    updateParticipantsChildren(
-      participantsChildren.filter((_, i) => i !== index)
-    );
-  };
-
-  const addChildGift = (childIndex) => {
-    const giftValue = (childrenNewGift[childIndex] || "").trim();
-    if (!giftValue) return;
-
-    const updatedChildren = participantsChildren.map((child, i) => {
-      if (i !== childIndex) return child;
-
-      const normalized = normalizeChild(child);
-      return {
-        ...normalized,
-        gifts: [...normalized.gifts, giftValue],
-      };
-    });
-
-    updateParticipantsChildren(updatedChildren);
-    updateChildrenGift({ ...childrenNewGift, [childIndex]: "" });
-  };
-
-  const removeChildGift = (childIndex, giftIndex) => {
-    const updatedChildren = participantsChildren.map((child, i) => {
-      if (i !== childIndex) return child;
-      if (typeof child === "string") return child;
-
-      return {
-        ...child,
-        gifts: (child.gifts || []).filter((_, pi) => pi !== giftIndex),
-      };
-    });
-
-    updateParticipantsChildren(updatedChildren);
   };
 
   // ===== Gift Management =====
@@ -177,7 +121,10 @@ export default function EventParticipant() {
 
     // Obfuscate phone for storage - use eventCode + participantId as key
     const obfuscationKey = (currentEvent?.code || "") + participantId;
-    const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
+    const obfuscatedPhone = obfuscatePhone(
+      participantPhone.trim(),
+      obfuscationKey
+    );
 
     // Hash phone for lookups - one-way hash, can't be reversed
     const phoneHash = await hashPhone(phoneDigits);
@@ -213,7 +160,10 @@ export default function EventParticipant() {
 
       // Obfuscate phone for storage
       const obfuscationKey = (currentEvent?.code || "") + p.id;
-      const obfuscatedPhone = obfuscatePhone(participantPhone.trim(), obfuscationKey);
+      const obfuscatedPhone = obfuscatePhone(
+        participantPhone.trim(),
+        obfuscationKey
+      );
 
       return {
         ...p,
@@ -436,7 +386,6 @@ export default function EventParticipant() {
   };
 
   // ===== View Result After Draw =====
-  // ===== View Result After Draw =====
   const showParticipantResult = async () => {
     const inputDigits = (eventParticipantId || "").replace(/\D/g, "");
     if (!inputDigits || inputDigits.length < 10) {
@@ -496,143 +445,14 @@ export default function EventParticipant() {
   };
 
   // ===== Render Helpers =====
-  const renderChildGiftItem = (child, childIndex) => {
-    const normalized = normalizeChild(child);
-    const { name: childNameDisplay, gifts: childGifts } = normalized;
-
-    return (
-      <div key={childIndex} className="bg-gray-50 p-3 rounded">
-        <div className="flex items-center justify-between">
-          <span className="font-medium">{childNameDisplay}</span>
-          <button
-            onClick={() => removeParticipantChild(childIndex)}
-            className="text-red-500 hover:text-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="mt-2">
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Sugestão para este filho"
-              value={childrenNewGift[childIndex] || ""}
-              onChange={(e) =>
-                updateChildrenGift({
-                  ...childrenNewGift,
-                  [childIndex]: e.target.value,
-                })
-              }
-              onKeyPress={(e) => e.key === "Enter" && addChildGift(childIndex)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-            />
-            <button
-              onClick={() => addChildGift(childIndex)}
-              className="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          {childGifts.length > 0 && (
-            <div className="space-y-1">
-              {childGifts.map((gift, giftIndex) => (
-                <div
-                  key={giftIndex}
-                  className="flex items-center justify-between bg-white px-3 py-1 rounded"
-                >
-                  <span className="text-sm text-gray-700">{gift}</span>
-                  <button
-                    onClick={() => removeChildGift(childIndex, giftIndex)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderParticipantListItem = (participant) => {
-    const childrenNames = includeChildren
-      ? participant.children?.map((f) => (typeof f === "string" ? f : f.name)) ||
-      []
-      : [];
-    const hasGifts = participant.gifts?.length > 0;
-    const hasChildGifts =
-      includeChildren &&
-      participant.children?.some(
-        (f) => typeof f !== "string" && f.gifts?.length > 0
-      );
-
-    return (
-      <div key={participant.id} className="text-sm text-gray-700">
-        {participant.name}
-        {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
-
-        {hasGifts && (
-          <div className="text-xs text-gray-500 mt-1">
-            Sugestões: {participant.gifts.join(", ")}
-          </div>
-        )}
-
-        {hasChildGifts && (
-          <div className="text-xs text-gray-500 mt-1">
-            {participant.children.map((child, i) => {
-              const normalized = normalizeChild(child);
-              return normalized.gifts.length > 0 ? (
-                <div key={i}>
-                  Sugestões ({normalized.name}):{" "}
-                  {normalized.gifts.join(", ")}
-                </div>
-              ) : null;
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderSuccessCard = () => (
-    <div className="space-y-6">
-      <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
-        <p className="text-xl text-green-800 font-semibold mb-4">
-          {successMessage}
-        </p>
-        <p className="text-green-700">
-          Agora é só aguardar o sorteio! <br />
-          Você poderá conferir seu amigo secreto usando o número do seu celular (com DDD).
-        </p>
-      </div>
-
-      {currentEvent && !isDrawComplete && (
-        <div className="py-4 flex justify-center">
-          <QRCodeCard
-            url={`${window.location.origin}?code=${currentEvent.code}`}
-            label="Compartilhe este evento"
-            size={200}
-            eventName={currentEvent.name}
-          />
-        </div>
-      )}
-
-      <div>
-        <p className="font-semibold text-gray-800 text-sm text-gray-600 mb-2">
-          Participantes: {includeChildren ? calculateTotalParticipants(eventParticipants) : eventParticipants.length}
-          {hasChildren ? ", incluindo filhos" : ""}
-        </p>
-        <div className="space-y-1">
-          {eventParticipants
-            .slice()
-            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-            .map(renderParticipantListItem)}
-        </div>
-      </div>
+    <div className="bg-green-50 border-2 border-green-500 rounded-lg p-6 text-center">
+      <p className="text-xl text-green-800 font-semibold mb-4">
+        {successMessage}
+      </p>
+      <p className="text-green-700">
+        Agora é só aguardar o sorteio!
+      </p>
     </div>
   );
 
@@ -707,35 +527,10 @@ export default function EventParticipant() {
       </div>
 
       {includeChildren && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Filhos (sem celular)
-          </label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Nome do filho"
-              value={childName}
-              onChange={(e) => updateChildName(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && addParticipantChild()}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-            />
-            <button
-              onClick={addParticipantChild}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
-          </div>
-
-          {participantsChildren.length > 0 && (
-            <div className="space-y-2">
-              {participantsChildren.map((child, index) =>
-                renderChildGiftItem(child, index)
-              )}
-            </div>
-          )}
-        </div>
+        <ChildrenForm
+          childrenList={participantsChildren}
+          onUpdateChildren={updateParticipantsChildren}
+        />
       )}
 
       <button
@@ -775,6 +570,46 @@ export default function EventParticipant() {
       </div>
     </>
   );
+
+  const renderParticipantListItem = (participant) => {
+    const childrenNames = includeChildren
+      ? participant.children?.map((f) => (typeof f === "string" ? f : f.name)) ||
+      []
+      : [];
+    const hasGifts = participant.gifts?.length > 0;
+    const hasChildGifts =
+      includeChildren &&
+      participant.children?.some(
+        (f) => typeof f !== "string" && f.gifts?.length > 0
+      );
+
+    return (
+      <div key={participant.id} className="text-sm text-gray-700">
+        {participant.name}
+        {childrenNames.length > 0 && ` (+ ${childrenNames.join(", ")})`}
+
+        {hasGifts && (
+          <div className="text-xs text-gray-500 mt-1">
+            Sugestões: {participant.gifts.join(", ")}
+          </div>
+        )}
+
+        {hasChildGifts && (
+          <div className="text-xs text-gray-500 mt-1">
+            {participant.children.map((child, i) => {
+              const normalized = normalizeChild(child);
+              return normalized.gifts.length > 0 ? (
+                <div key={i}>
+                  Sugestões ({normalized.name}):{" "}
+                  {normalized.gifts.join(", ")}
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderDrawCompletedView = () => (
     <div className="space-y-4">
@@ -828,7 +663,7 @@ export default function EventParticipant() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-12">
+      <div className="max-w-md mx-auto pt-6">
         <Header />
         <button
           onClick={() => updateView("home")}
@@ -856,7 +691,9 @@ export default function EventParticipant() {
                 <p className="text-gray-600 mt-1">
                   Data do sorteio:{" "}
                   <span className="font-bold">
-                    {new Date(currentEvent.plannedDrawDate).toLocaleDateString('pt-BR')}
+                    {new Date(currentEvent.plannedDrawDate).toLocaleDateString(
+                      "pt-BR"
+                    )}
                   </span>
                 </p>
               )}
@@ -864,30 +701,33 @@ export default function EventParticipant() {
           )}
 
           {/* Show admin access button when the current logged-in participant is the admin */}
-          {accessedViaParticipantCode && (() => {
-            const isAdminFromCurrentParticipant = !!(
-              currentEvent?.currentParticipant && currentEvent.currentParticipant.isAdmin
-            );
-            const isAdminFromUid = (() => {
-              if (!currentUid) return false;
-              const parts = currentEvent?.participants || [];
-              return parts.some(
-                (p) => p.isAdmin && p.createdByUid && p.createdByUid === currentUid
+          {accessedViaParticipantCode &&
+            (() => {
+              const isAdminFromCurrentParticipant = !!(
+                currentEvent?.currentParticipant &&
+                currentEvent.currentParticipant.isAdmin
               );
-            })();
-            return (isAdminFromCurrentParticipant || isAdminFromUid) && (
-              <div className="mb-4">
-                <button
-                  onClick={() => updateView("admin")}
-                  className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"
-                >
-                  Acessar Admin
-                </button>
-              </div>
-            );
-          })
-            ()
-          }
+              const isAdminFromUid = (() => {
+                if (!currentUid) return false;
+                const parts = currentEvent?.participants || [];
+                return parts.some(
+                  (p) =>
+                    p.isAdmin && p.createdByUid && p.createdByUid === currentUid
+                );
+              })();
+              return (
+                (isAdminFromCurrentParticipant || isAdminFromUid) && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => updateView("admin")}
+                      className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700"
+                    >
+                      Acessar Admin
+                    </button>
+                  </div>
+                )
+              );
+            })()}
           {renderEventContent()}
         </div>
         <Footer />

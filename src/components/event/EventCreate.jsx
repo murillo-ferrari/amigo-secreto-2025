@@ -82,7 +82,7 @@ export default function CriarEvento() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
-      <div className="max-w-md mx-auto pt-12">
+      <div className="max-w-md mx-auto pt-6">
         <Header />
         <button
           onClick={() => setView("home")}

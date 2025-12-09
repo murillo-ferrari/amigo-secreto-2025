@@ -1,6 +1,6 @@
 import { useEvent } from "../context/EventContext";
 import ErrorScreen from "./common/ErrorScreen";
-import EventAdmin from "./event/EventAdmin";
+import EventAdmin from "./event/admin/EventAdmin";
 import EventCreate from "./event/EventCreate";
 import EventHome from "./event/EventHome";
 import EventParticipant from "./event/EventParticipant";

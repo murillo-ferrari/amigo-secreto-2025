@@ -70,21 +70,19 @@ export const normalizeAccessCode = (val) => {
   if (digits.length >= 8) return digits; // likely a phone
   return String(val).toUpperCase();
 };
-// Gera URL do WhatsApp com mensagem
-/* export const gerarLinkWhatsApp = (nome, amigo, celular, nomeEvento, suggestedValue) => {
-  const mensagem = `🎁 *Amigo Secreto - ${nomeEvento}*\n\n` +
-                  `Olá ${nome}!\n\n` +
-                  `Seu amigo secreto é: *${amigo}*\n\n` +
-                  (suggestedValue ? `Valor sugerido: R$ ${suggestedValue}\n\n` : '') +
-                  `Boas compras! 🎉`;
-  
-  return `https://wa.me/${celular.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
-}; */
 
 // Re-export crypto utilities for convenience
 export {
   deobfuscatePhone, hashPhone, isObfuscated, maskPhone, obfuscatePhone
 } from "./crypto.js";
+
+// Helper to normalize child structure
+export const normalizeChild = (child) => {
+  if (typeof child === "string") {
+    return { name: child, gifts: [] };
+  }
+  return { name: child.name, gifts: child.gifts || [] };
+};
 
 /**
  * Return a shallow copy of the event object with transient UI-only fields removed.
