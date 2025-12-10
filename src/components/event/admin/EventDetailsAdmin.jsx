@@ -125,7 +125,7 @@ export default function EventDetailsAdmin({
                         <div className="mt-3 flex gap-2">
                             <button
                                 onClick={handleSave}
-                                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
                             >
                                 Salvar alterações
                             </button>
