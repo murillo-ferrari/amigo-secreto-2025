@@ -1,5 +1,5 @@
 import firebaseStorage from "../firebase";
-import { hashPhone, normalizeAccessCode, getPersistableEvent } from "../utils/helpers";
+import { hashPhone, normalizeAccessCode, getPersistableEvent, deobfuscatePhone, isObfuscated } from "../utils/helpers";
 
 const eventService = {
   /**
@@ -117,9 +117,34 @@ const eventService = {
 
             const event = JSON.parse(result.value);
             const participantsList = event.participants || [];
-            const participant = participantsList.find((participant) =>
+            
+            // 1. Try to find by hash (fastest and most secure)
+            let participant = participantsList.find((participant) =>
               this.matchesPhoneHash(participant, inputPhoneHash)
             );
+
+            // 2. Fallback: Try to find by deobfuscating legacy phones (slower)
+            if (!participant) {
+              participant = participantsList.find((p) => {
+                // Skip if it has a hash (should have matched above) or no phone
+                if (p.mobilePhoneHash || !p.mobilePhone) return false;
+
+                try {
+                  let pDigits = "";
+                  if (isObfuscated(p.mobilePhone)) {
+                    // Deobfuscate using event code + participant ID
+                    const key = event.code + p.id;
+                    const clear = deobfuscatePhone(p.mobilePhone, key);
+                    pDigits = clear.replace(/\D/g, "");
+                  } else {
+                    pDigits = p.mobilePhone.replace(/\D/g, "");
+                  }
+                  return pDigits === cleanedMobileNumber;
+                } catch (e) {
+                  return false;
+                }
+              });
+            }
 
             if (participant) {
               matches.push({ event, participant });

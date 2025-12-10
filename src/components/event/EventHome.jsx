@@ -14,6 +14,7 @@ export default function Home() {
     accessCode: eventAccessCode,
     setAccessCode: updateEventAccessCode,
     retrieveParticipantByPhone: retrieveCodeByPhone,
+    checkEventsByPhone,
     recoverParticipantInEvent: recuperarEventoPorCelular,
     fetchEventByCode,
     loading,
@@ -31,7 +32,7 @@ export default function Home() {
         firebase.clearRecaptcha();
       }
     };
-  }, []);
+  }, [firebase]);
 
   const handleAccessClick = async () => {
     const raw = eventAccessCode || "";
@@ -157,6 +158,7 @@ export default function Home() {
                 {(digitsOnly.length === 10 || digitsOnly.length === 11) && (
                   <EventAccessCode
                     recuperarPorCelular={retrieveCodeByPhone}
+                    checkEventsByPhone={checkEventsByPhone}
                     recuperarEventoPorCelular={recuperarEventoPorCelular}
                     loading={loading}
                     phoneNumber={eventAccessCode}

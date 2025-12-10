@@ -6,6 +6,7 @@ import { useMessage } from "../message/MessageContext";
 
 export default function EventAccessCode({
   recuperarPorCelular: recoverCodeByPhone,
+  checkEventsByPhone,
   recuperarEventoPorCelular,
   loading,
   phoneNumber = "",
@@ -64,6 +65,27 @@ export default function EventAccessCode({
 
     setError("");
     setInternalLoading(true);
+
+    // Check if phone exists in any event BEFORE sending SMS
+    if (checkEventsByPhone) {
+      try {
+        const existingEvents = await checkEventsByPhone(phoneNumber);
+        if (!existingEvents || existingEvents.length === 0) {
+          setError("Este número não está cadastrado em nenhum evento.");
+          if (message?.error)
+            message.error({ message: "Número não encontrado." });
+          setInternalLoading(false);
+          // Reset trigger so user can try again
+          if (onReset) onReset();
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking phone existence:", err);
+        setError("Erro ao verificar cadastro. Tente novamente.");
+        setInternalLoading(false);
+        return;
+      }
+    }
 
     // Check if this phone was already verified in the current session
     const isVerifiedInSession = firebase?.isPhoneVerifiedInSession && await firebase.isPhoneVerifiedInSession(phoneNumber);

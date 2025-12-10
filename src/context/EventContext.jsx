@@ -181,6 +181,16 @@ export const EventProvider = ({ children }) => {
         }
     };
 
+    const checkEventsByPhone = async (mobileNumberInput) => {
+        // Pure lookup, no side effects on state
+        try {
+            return await eventService.findEventsByPhone(mobileNumberInput);
+        } catch (error) {
+            console.error("Error checking events by phone:", error);
+            return [];
+        }
+    };
+
     const recoverParticipantInEvent = async (eventCode, mobileNumberInput) => {
         setLoading(true);
         try {
@@ -245,7 +255,8 @@ export const EventProvider = ({ children }) => {
         setGifts,
         fetchEventByCode,
         retrieveParticipantByPhone,
-        recoverParticipantInEvent
+        checkEventsByPhone,
+        recoverParticipantInEvent,
     };
 
     return (
