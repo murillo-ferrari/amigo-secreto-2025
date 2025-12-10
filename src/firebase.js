@@ -55,7 +55,7 @@ try {
   // and database rules allow public reads for events
   authReadyPromise = new Promise((resolve) => {
     // Listen for auth state changes (will fire when phone auth succeeds)
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const _unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         authReady = true;
         resolve(true);
@@ -71,10 +71,10 @@ try {
       }
     }, 100);
   });
-} catch (err) {
-  console.error("Firebase initialization error:", err);
-  initError = err;
-  authReadyPromise = Promise.reject(err);
+} catch (firebaseError) {
+  console.error("Firebase initialization error:", firebaseError);
+  initError = firebaseError;
+  authReadyPromise = Promise.reject(firebaseError);
 }
 
 // Convert storage key to Firebase path
@@ -598,7 +598,7 @@ const firebaseStorage = {
   isPhoneVerifiedInSession,
   clearVerifiedPhonesSession,
   // Expose auth state change listener
-  onAuthStateChanged: (cb) => (auth ? onAuthStateChanged(auth, cb) : null),
+  onAuthStateChanged: (authStateChangeCallback) => (auth ? onAuthStateChanged(auth, authStateChangeCallback) : null),
 
   // Return current authenticated user's UID (or null)
   getCurrentUserUid: () =>

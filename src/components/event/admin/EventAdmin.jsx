@@ -52,26 +52,25 @@ export default function AdminEvento() {
     try {
       // Check 1: If currentParticipant is set and marked as admin (they verified via phone)
       if (currentEvent?.currentParticipant?.isAdmin) {
-        console.log(
+        /* console.log(
           "isAuthorizedAdmin: authorized via currentParticipant.isAdmin"
-        );
+        ); */
         return true;
       }
 
       if (!firebaseStorage || !firebaseStorage.getCurrentUserUid) return false;
       const uid = firebaseStorage.getCurrentUserUid();
-
-      console.log("isAuthorizedAdmin check - current UID:", uid);
+      /* console.log("isAuthorizedAdmin check - current UID:", uid);
       console.log(
         "isAuthorizedAdmin check - event.createdByUid:",
         currentEvent?.createdByUid
-      );
+      ); */
 
       if (!uid) return false;
 
       // Check 2: Primary ownership: event.createdByUid (set when participant created)
       if (currentEvent?.createdByUid && currentEvent.createdByUid === uid) {
-        console.log("isAuthorizedAdmin: authorized via event.createdByUid");
+        // console.log("isAuthorizedAdmin: authorized via event.createdByUid");
         return true;
       }
 
@@ -79,32 +78,31 @@ export default function AdminEvento() {
       const adminId = currentEvent?.adminParticipantId || null;
       if (adminId) {
         const adminParticipant = (currentEvent.participants || []).find(
-          (p) => p.id === adminId
+          (participant) => participant.id === adminId
         );
-        console.log(
+        /* console.log(
           "isAuthorizedAdmin check - adminParticipant:",
           adminParticipant
-        );
+        ); */
         if (adminParticipant && adminParticipant.createdByUid === uid) {
-          console.log(
+          /* console.log(
             "isAuthorizedAdmin: authorized via adminParticipant.createdByUid"
-          );
+          ); */
           return true;
         }
       }
 
       // Check 4: Any participant with isAdmin flag and matching UID
       const adminByFlag = (currentEvent?.participants || []).find(
-        (p) => p.isAdmin && p.createdByUid === uid
+        (participant) => participant.isAdmin && participant.createdByUid === uid
       );
       if (adminByFlag) {
-        console.log(
+        /* console.log(
           "isAuthorizedAdmin: authorized via participant with isAdmin flag"
-        );
+        ); */
         return true;
       }
-
-      console.log("isAuthorizedAdmin: NOT authorized");
+      // console.log("isAuthorizedAdmin: NOT authorized");
       return false;
     } catch (error) {
       console.warn("isAuthorizedAdmin failed:", error);

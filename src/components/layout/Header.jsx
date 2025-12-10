@@ -15,7 +15,7 @@ export default function Header({ verified = null, phone = null }) {
     // Check session if phone is provided
     if (phone && firebaseStorage.isPhoneVerifiedInSession) {
       firebaseStorage.isPhoneVerifiedInSession(phone).then((result) => {
-        console.log("Header: isVerified from session?", result);
+        // console.log("Header: isVerified from session?", result);
         if (result) setIsVerified(true);
       });
     }

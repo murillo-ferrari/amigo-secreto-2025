@@ -214,7 +214,7 @@ export const performSecretSantaDraw = async (
     return;
   }
 
-  console.log("Draw:", draw);
+  // console.log("Draw:", draw);
 
   // Prepare event object for persistence. Ensure transient UI-only fields
   // (like `currentParticipant`) are not persisted to the DB.
