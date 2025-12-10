@@ -5,6 +5,8 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
   signInAnonymously,
+  PhoneAuthProvider,
+  linkWithCredential,
 } from "firebase/auth";
 import { get, getDatabase, ref, remove, set } from "firebase/database";
 import { deobfuscatePhone, hashPhone, isObfuscated, maskPhone, obfuscatePhone } from "./utils/crypto.js";
@@ -359,6 +361,51 @@ const sendPhoneVerification = async (phone) => {
 const confirmPhoneCode = async (code) => {
   if (!lastConfirmationResult) throw new Error("No verification in progress");
   try {
+    // If there's an existing authenticated user and it's anonymous, attempt
+    // to link the phone credential to preserve the UID (prevents ownership loss).
+    const currentUser = auth && auth.currentUser ? auth.currentUser : null;
+
+    // Obtain verificationId from the confirmation result (available on web SDK)
+    const verificationId = lastConfirmationResult?.verificationId || null;
+
+    if (currentUser && currentUser.isAnonymous && verificationId) {
+      try {
+        const phoneCredential = PhoneAuthProvider.credential(verificationId, code);
+        const linked = await linkWithCredential(currentUser, phoneCredential);
+        const uid = linked.user?.uid || null;
+
+        // Save verified phone hash to sessionStorage for session-based caching
+        try {
+          if (lastPhoneNumber && typeof sessionStorage !== "undefined") {
+            const verifiedPhones = JSON.parse(
+              sessionStorage.getItem("verifiedPhones") || "[]"
+            );
+            const normalizedPhone = normalizePhone(lastPhoneNumber);
+            const phoneHash = await hashPhone(normalizedPhone);
+            if (phoneHash && !verifiedPhones.includes(phoneHash)) {
+              verifiedPhones.push(phoneHash);
+              sessionStorage.setItem(
+                "verifiedPhones",
+                JSON.stringify(verifiedPhones)
+              );
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to save verified phone to sessionStorage:", err);
+        }
+
+        // clear temporary state
+        lastConfirmationResult = null;
+        lastPhoneNumber = null;
+
+        return uid;
+      } catch (linkError) {
+        // Linking failed (credential may be in use). Fall back to confirming sign-in.
+        console.warn("Linking anonymous user with phone credential failed:", linkError);
+      }
+    }
+
+    // Default fallback: confirm and sign in with the phone credential
     const userCredential = await lastConfirmationResult.confirm(code);
     const uid = userCredential.user?.uid || null;
 
@@ -377,7 +424,6 @@ const confirmPhoneCode = async (code) => {
             JSON.stringify(verifiedPhones)
           );
         }
-        // console.log("Phone verified and cached in session (hashed)");
       }
     } catch (err) {
       console.warn("Failed to save verified phone to sessionStorage:", err);
