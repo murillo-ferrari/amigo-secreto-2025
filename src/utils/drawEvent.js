@@ -233,6 +233,11 @@ export const performSecretSantaDraw = async (
   };
 
   try {
+    // Ensure auth is ready before writing
+    if (firebaseStorage.waitForAuth) {
+      await firebaseStorage.waitForAuth();
+    }
+    
     await firebaseStorage.set(
       `event:${currentEvent.code}`,
       JSON.stringify(updatedEventForDb)

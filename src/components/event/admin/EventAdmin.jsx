@@ -69,6 +69,10 @@ export default function AdminEvento() {
       if (!uid) return false;
 
       // Check 2: Primary ownership: event.createdByUid (set when participant created)
+      // Also check event.adminUid (set at event creation level)
+      if (currentEvent?.adminUid && currentEvent.adminUid === uid) {
+        return true;
+      }
       if (currentEvent?.createdByUid && currentEvent.createdByUid === uid) {
         // console.log("isAuthorizedAdmin: authorized via event.createdByUid");
         return true;
@@ -140,6 +144,14 @@ export default function AdminEvento() {
         }
       } catch (e) {
         console.warn("waitForAuth failed:", e);
+      }
+
+      // Re-verify auth state immediately before write
+      const currentUserUid = firebaseStorage.getCurrentUserUid();
+      if (!currentUserUid) {
+        console.error("Cannot save event: User not authenticated");
+        message.error({ message: "Erro de autenticação. Recarregue a página." });
+        return false;
       }
 
       if (!isAuthorizedAdmin()) {
