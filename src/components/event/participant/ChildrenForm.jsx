@@ -71,18 +71,18 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                     type="text"
                     placeholder="Nome da criança"
                     value={childName}
-                    onChange={(e) => setChildName(e.target.value)}
+                    onChange={(event) => setChildName(event.target.value)}
                     className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg"
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            e.preventDefault();
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
                             addParticipantChild();
                         }
                     }}
                 />
                 <button
                     onClick={addParticipantChild}
-                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition shrink-0"
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition shrink-0"
                     title="Adicionar criança"
                 >
                     <Plus className="w-4 h-4" />
@@ -115,16 +115,16 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                                         type="text"
                                         placeholder={`Sugestão de presente para ${childData.name}`}
                                         value={childrenNewGift[index] || ""}
-                                        onChange={(e) =>
+                                        onChange={(event) =>
                                             setChildrenNewGift({
                                                 ...childrenNewGift,
-                                                [index]: e.target.value,
+                                                [index]: event.target.value,
                                             })
                                         }
                                         className="flex-1 min-w-0 px-3 py-1 text-sm border border-gray-300 rounded"
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter") {
+                                                event.preventDefault();
                                                 addChildGift(index);
                                             }
                                         }}
