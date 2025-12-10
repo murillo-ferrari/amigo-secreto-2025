@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useFirebase } from "../../context/FirebaseContext";
 import { formatMobileNumber, verifyMobileNumber } from "../../utils/helpers";
 import { useMessage } from "../message/MessageContext";
+import Spinner from "../common/Spinner";
 
 export default function EventAccessCode({
   recuperarPorCelular: recoverCodeByPhone,
@@ -24,11 +25,11 @@ export default function EventAccessCode({
   // When parent triggers access, start the SMS flow
   useEffect(() => {
     let mounted = true;
-    
+
     if (triggerAccess && phoneNumber && mounted) {
       handleStartSmsVerification();
     }
-    
+
     return () => {
       mounted = false;
       if (firebase?.clearRecaptcha) {
@@ -183,8 +184,8 @@ export default function EventAccessCode({
       }
       // After confirmation, search for events
       await performSearch();
-    } catch (err) {
-      console.error("SMS confirmation failed:", err);
+    } catch (error) {
+      console.error("SMS confirmation failed:", error);
       setError("Código inválido ou expirado. Tente novamente.");
       setInternalLoading(false);
     }
@@ -268,8 +269,8 @@ export default function EventAccessCode({
     <div className="bg-gray-50 p-4 rounded-lg border">
       {/* Sending SMS */}
       {step === "sending" && (
-        <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-3"></div>
+        <div className="flex flex-col gap-2 items-center justify-center py-8">
+          <Spinner />
           <p className="text-gray-700">
             Enviando código SMS para {formatMobileNumber(phoneNumber)}...
           </p>
@@ -318,20 +319,20 @@ export default function EventAccessCode({
 
       {/* Searching */}
       {step === "searching" && (
-        <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-3"></div>
+        <div className="flex flex-col gap-2 items-center justify-center py-8">
+          <Spinner />
           <p className="text-gray-700">Buscando seus eventos...</p>
         </div>
       )}
 
       {/* Results: Multiple events */}
       {step === "results" && matches.length > 1 && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           <p className="text-sm text-gray-700 text-center font-medium">
             Encontramos {matches.length} eventos com esse número. <br />
             Selecione qual deseja acessar:
           </p>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {matches.map((m) => (
               <div
                 key={m.event.code}
@@ -347,7 +348,7 @@ export default function EventAccessCode({
                 </div>
                 <button
                   onClick={() => handleSelectEvent(m.event.code)}
-                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg inline-flex items-center gap-2 justify-center font-medium transition"
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg inline-flex items-center gap-2 justify-center font-medium transition"
                 >
                   <span>Acessar</span>
                   <ExternalLink className="w-4 h-4" />
@@ -355,18 +356,12 @@ export default function EventAccessCode({
               </div>
             ))}
           </div>
-          <button
-            onClick={reset}
-            className="w-full mt-2 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-          >
-            Voltar
-          </button>
         </div>
       )}
 
       {/* Results: No events found */}
       {step === "results" && matches.length === 0 && (
-        <div className="text-center py-4 space-y-3">
+        <div className="flex flex-col gap-4 items-center justify-center py-4">
           <p className="text-gray-700">
             {error || "Nenhum evento encontrado para este número."}
           </p>
@@ -381,7 +376,7 @@ export default function EventAccessCode({
 
       {/* Blocked: Rate limit or quota exceeded - NO fallback allowed */}
       {step === "blocked" && (
-        <div className="text-center py-6 space-y-4">
+        <div className="flex flex-col gap-4 items-center text-center py-6">
           <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
             <svg
               className="w-8 h-8 text-red-600"
@@ -401,7 +396,7 @@ export default function EventAccessCode({
             <p className="text-red-600 font-semibold text-lg">
               Acesso Temporariamente Bloqueado
             </p>
-            <p className="text-gray-600 mt-2">{error}</p>
+            <p className="text-gray-600">{error}</p>
           </div>
           <button
             onClick={reset}

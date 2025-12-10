@@ -164,7 +164,6 @@ export default function CriarEvento() {
         >
           ← Voltar
         </button>
-
         <div className="border border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800">
             {step === 1 ? "Criar Evento" : "Dados do Administrador"}

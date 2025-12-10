@@ -18,10 +18,7 @@ export default function Home() {
     recoverParticipantInEvent: recuperarEventoPorCelular,
     fetchEventByCode,
     loading,
-    currentUid,
   } = useEvent();
-
-  const verified = !!currentUid;
   const [triggerAccess, setTriggerAccess] = useState(false);
   const firebase = useFirebase();
 
@@ -64,7 +61,7 @@ export default function Home() {
     const value = e.target.value;
     const digitsOnly = value.replace(/\D/g, "");
 
-    // If the input starts with a digit OR contains digits with phone formatting (parenthesis),
+    // If the input starts with a digit OR contains a parenthesis,
     // treat it as a phone number
     const isPhoneInput = /^\d/.test(value) || (value.startsWith("(") && digitsOnly.length > 0);
 
@@ -85,9 +82,17 @@ export default function Home() {
 
   const rawInput = eventAccessCode || "";
   const digitsOnly = rawInput.replace(/\D/g, "");
-  const isPhoneValid = digitsOnly.length >= 10;
-  const isCodeLike = rawInput.trim().length > 0 && !/^\d+$/.test(rawInput.trim());
-  const isInputValid = isPhoneValid || isCodeLike;
+
+  // Detect input type based on first character
+  const isPhoneInput = /^[\d(]/.test(rawInput.trim());
+  const isCodeInput = /^[a-zA-Z]/.test(rawInput.trim());
+
+  // Validation rules:
+  // - Phone: must be at least 14 characters (formatted)
+  // - Code: must be exactly 6 characters
+  const isPhoneValid = isPhoneInput && rawInput.length >= 14;
+  const isCodeValid = isCodeInput && rawInput.length === 6;
+  const isInputValid = isPhoneValid || isCodeValid;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
@@ -102,9 +107,20 @@ export default function Home() {
             overflow: "hidden"
           }}
         />
-        <Header verified={verified} />
-
-        <div className="border bg-white rounded-lg shadow-lg p-6 space-y-4">
+        <Header />
+        {triggerAccess && (
+          <button
+            onClick={() => { 
+              setView("home"); 
+              updateEventAccessCode(""); 
+              setTriggerAccess(false); 
+            }}
+            className="text-left text-gray-600 hover:text-gray-800"
+          >
+            ← Voltar
+          </button>
+        )}
+        <div className="flex flex-col gap-4 border bg-white rounded-lg shadow-lg p-6">
           {/* Show Spinner only if loading AND NOT in phone verification flow (which handles its own loading) */}
           {loading && !triggerAccess ? (
             <div className="flex items-center justify-center py-8">
@@ -112,39 +128,33 @@ export default function Home() {
             </div>
           ) : (
             <>
-              {!triggerAccess && (
-                <button
-                  onClick={() => setView("criar")}
-                  className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
-                >
-                  Criar Novo Evento
-                </button>
-              )}
-
-              {!triggerAccess && (
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
+              {!triggerAccess ? (
+                <>
+                  {/* Create New Event */}
+                  <button
+                    onClick={() => setView("criar")}
+                    className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
+                  >
+                    Criar Novo Evento
+                  </button>
+                  {/* Separator */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">ou</span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">ou</span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                {!triggerAccess && (
+                  {/* Access Existing Event */}
                   <input
                     type="text"
                     placeholder="Código do evento / celular (com DDD)"
                     value={eventAccessCode}
                     onChange={handleInputChange}
                     maxLength={15}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-3"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   />
-                )}
-                
-                {!triggerAccess && (
                   <button
                     onClick={handleAccessClick}
                     disabled={loading || !isInputValid}
@@ -152,10 +162,10 @@ export default function Home() {
                   >
                     Acessar Evento
                   </button>
-                )}
-
-                {/* Only render SMS verification component when phone flow is triggered */}
-                {(digitsOnly.length === 10 || digitsOnly.length === 11) && (
+                </>
+              ) : (
+                /* Only render SMS verification component when phone flow is triggered */
+                (digitsOnly.length === 10 || digitsOnly.length === 11) && (
                   <EventAccessCode
                     recuperarPorCelular={retrieveCodeByPhone}
                     checkEventsByPhone={checkEventsByPhone}
@@ -165,11 +175,12 @@ export default function Home() {
                     triggerAccess={triggerAccess}
                     onReset={handleReset}
                   />
-                )}
-              </div>
+                )
+              )}
             </>
           )}
         </div>
+
         <Footer />
       </div>
     </div>

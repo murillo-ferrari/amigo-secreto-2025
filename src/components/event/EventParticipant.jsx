@@ -92,19 +92,19 @@ export default function EventParticipant() {
 
   const findExistingParticipant = () => {
     const inputPhoneDigits = (participantPhone || "").replace(/\D/g, "");
-    return eventParticipants.find((p) => {
+    return eventParticipants.find((participant) => {
       // Check name match
-      if (p.name === participantName.trim()) return true;
+      if (participant.name === participantName.trim()) return true;
 
       // Check phone match - compare digits
       // If celular is obfuscated, try to deobfuscate first
       let pPhoneDigits;
-      if (isObfuscated(p.mobilePhone)) {
-        const key = (currentEvent?.code || "") + p.id;
-        const deobfuscated = deobfuscatePhone(p.mobilePhone, key);
+      if (isObfuscated(participant.mobilePhone)) {
+        const key = (currentEvent?.code || "") + participant.id;
+        const deobfuscated = deobfuscatePhone(participant.mobilePhone, key);
         pPhoneDigits = deobfuscated.replace(/\D/g, "");
       } else {
-        pPhoneDigits = (p.mobilePhone || "").replace(/\D/g, "");
+        pPhoneDigits = (participant.mobilePhone || "").replace(/\D/g, "");
       }
 
       return pPhoneDigits === inputPhoneDigits;
@@ -155,18 +155,18 @@ export default function EventParticipant() {
     // Hash phone for lookups - one-way hash, can't be reversed
     const phoneHash = await hashPhone(phoneDigits);
 
-    return eventParticipants.map((p) => {
-      if (p.id !== existingParticipant.id) return p;
+    return eventParticipants.map((participant) => {
+      if (participant.id !== existingParticipant.id) return participant;
 
       // Obfuscate phone for storage
-      const obfuscationKey = (currentEvent?.code || "") + p.id;
+      const obfuscationKey = (currentEvent?.code || "") + participant.id;
       const obfuscatedPhone = obfuscatePhone(
         participantPhone.trim(),
         obfuscationKey
       );
 
       return {
-        ...p,
+        ...participant,
         name: participantName.trim(),
         mobilePhone: obfuscatedPhone,
         mobilePhoneHash: phoneHash,
@@ -192,7 +192,7 @@ export default function EventParticipant() {
 
     // Update phone index: remove old mapping (if phone changed) then set new mapping
     try {
-      const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+      const normalizePhone = (phoneInput) => (phoneInput || "").replace(/\D/g, "");
       const oldNorm = oldParticipantPhone
         ? normalizePhone(oldParticipantPhone)
         : null;
@@ -323,7 +323,7 @@ export default function EventParticipant() {
           }
 
           // Also update phone index for the new participant
-          const normalizePhone = (p) => (p || "").replace(/\D/g, "");
+          const normalizePhone = (phoneInput) => (phoneInput || "").replace(/\D/g, "");
           const newNorm = newPhone ? normalizePhone(newPhone) : null;
           if (newNorm && firebaseStorage.setPhoneIndex) {
             try {
@@ -397,9 +397,9 @@ export default function EventParticipant() {
     // We need to match hash
     const inputHash = await hashPhone(inputDigits);
 
-    const foundParticipant = eventParticipants.find((p) => {
-      if (p.mobilePhoneHash) {
-        return p.mobilePhoneHash === inputHash;
+    const foundParticipant = eventParticipants.find((participant) => {
+      if (participant.mobilePhoneHash) {
+        return participant.mobilePhoneHash === inputHash;
       }
       // Fallback for non-hashed phones (older data)
       return false;
@@ -407,16 +407,16 @@ export default function EventParticipant() {
 
     if (!foundParticipant) {
       // Try to recover by checking obfuscated phones if hash is missing (legacy)
-      const matchLegacy = eventParticipants.find((p) => {
-        if (!p.mobilePhoneHash && p.mobilePhone) {
+      const matchLegacy = eventParticipants.find((participant) => {
+        if (!participant.mobilePhoneHash && participant.mobilePhone) {
           // If obfuscated
-          if (isObfuscated(p.mobilePhone)) {
-            const key = (currentEvent?.code || "") + p.id;
-            const clear = deobfuscatePhone(p.mobilePhone, key);
+          if (isObfuscated(participant.mobilePhone)) {
+            const key = (currentEvent?.code || "") + participant.id;
+            const clear = deobfuscatePhone(participant.mobilePhone, key);
             return clear.replace(/\D/g, "") === inputDigits;
           }
           // If clear
-          return p.mobilePhone.replace(/\D/g, "") === inputDigits;
+          return participant.mobilePhone.replace(/\D/g, "") === inputDigits;
         }
         return false;
       });
@@ -651,7 +651,6 @@ export default function EventParticipant() {
         >
           ← Voltar
         </button>
-
         <div className="border flex flex-col gap-4 bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800">
             {currentEvent?.name}
