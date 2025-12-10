@@ -128,6 +128,11 @@ export default function Home() {
                 placeholder="Código do evento / celular (com DDD)"
                 value={eventAccessCode}
                 onChange={handleInputChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !loading && isInputValid) {
+                    handleAccessClick();
+                  }
+                }}
                 maxLength={15}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg"
               />

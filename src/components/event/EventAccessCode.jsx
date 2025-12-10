@@ -263,6 +263,17 @@ export default function EventAccessCode({
 
   // Render nothing when idle
   if (step === "idle") {
+    // If we are triggered but still in idle (waiting for effect), show spinner
+    if (triggerAccess) {
+      return (
+        <div className="bg-gray-50 p-4 rounded-lg border">
+          <div className="flex flex-col gap-2 items-center justify-center py-8">
+            <Spinner />
+            <p className="text-gray-700">Iniciando verificação...</p>
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -292,6 +303,12 @@ export default function EventAccessCode({
             maxLength={6}
             value={smsCode}
             onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter")
+                if (smsCode && smsCode.length === 6) {
+                  confirmSmsCode();
+                }
+            }}
             placeholder="000000"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg text-center text-2xl tracking-widest font-mono"
             autoFocus
