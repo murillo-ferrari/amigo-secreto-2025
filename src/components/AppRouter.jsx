@@ -4,6 +4,7 @@ import EventAdmin from "./event/admin/EventAdmin";
 import EventCreate from "./event/EventCreate";
 import EventHome from "./event/EventHome";
 import EventParticipant from "./event/EventParticipant";
+import EventPhoneVerification from "./event/EventPhoneVerification";
 import SecretSantaResults from "./event/EventResults";
 
 export default function AppRouter() {
@@ -26,6 +27,8 @@ export default function AppRouter() {
             return <EventHome />;
         case "criar":
             return <EventCreate />;
+        case "verificar-telefone":
+            return <EventPhoneVerification />;
         case "evento":
             return <EventParticipant />;
         case "admin":

@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useEvent } from "../../context/EventContext";
 import { useFirebase } from "../../context/FirebaseContext";
 import { formatMobileNumber } from "../../utils/helpers";
 import Spinner from "../common/Spinner";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
-import EventAccessCode from "./EventAccessCode";
 
 export default function Home() {
   // Get all state from context instead of props
@@ -13,13 +12,9 @@ export default function Home() {
     setView,
     accessCode: eventAccessCode,
     setAccessCode: updateEventAccessCode,
-    retrieveParticipantByPhone: retrieveCodeByPhone,
-    checkEventsByPhone,
-    recoverParticipantInEvent: recuperarEventoPorCelular,
     fetchEventByCode,
     loading,
   } = useEvent();
-  const [triggerAccess, setTriggerAccess] = useState(false);
   const firebase = useFirebase();
 
   useEffect(() => {
@@ -35,9 +30,9 @@ export default function Home() {
     const raw = eventAccessCode || "";
     const digits = raw.replace(/\D/g, "");
 
-    // If user entered a phone number (10 or 11 digits), start SMS flow
+    // If user entered a phone number (10 or 11 digits), switch to verification view
     if (digits.length === 10 || digits.length === 11) {
-      setTriggerAccess(true);
+      setView("verificar-telefone");
       return;
     }
 
@@ -45,16 +40,11 @@ export default function Home() {
     const code = (raw || "").toUpperCase().trim();
     if (!code) return;
     try {
-      setTriggerAccess(false);
       await fetchEventByCode(code);
     } catch (err) {
       // fetchEventByCode handles messaging; swallow errors here
       console.error("Error fetching event by code:", err);
     }
-  };
-
-  const handleReset = () => {
-    setTriggerAccess(false);
   };
 
   const handleInputChange = (e) => {
@@ -81,12 +71,11 @@ export default function Home() {
   };
 
   const rawInput = eventAccessCode || "";
-  const digitsOnly = rawInput.replace(/\D/g, "");
-
+  
   // Detect input type based on first character
   const isPhoneInput = /^[\d(]/.test(rawInput.trim());
   const isCodeInput = /^[a-zA-Z]/.test(rawInput.trim());
-
+  
   // Validation rules:
   // - Phone: must be at least 14 characters (formatted)
   // - Code: must be exactly 6 characters
@@ -108,75 +97,47 @@ export default function Home() {
           }}
         />
         <Header />
-        {triggerAccess && (
-          <button
-            onClick={() => { 
-              setView("home"); 
-              updateEventAccessCode(""); 
-              setTriggerAccess(false); 
-            }}
-            className="text-left text-gray-600 hover:text-gray-800"
-          >
-            ← Voltar
-          </button>
-        )}
+        
         <div className="flex flex-col gap-4 border bg-white rounded-lg shadow-lg p-6">
-          {/* Show Spinner only if loading AND NOT in phone verification flow (which handles its own loading) */}
-          {loading && !triggerAccess ? (
+          {/* Show Spinner only if loading */}
+          {loading ? (
             <div className="flex items-center justify-center py-8">
               <Spinner />
             </div>
           ) : (
             <>
-              {!triggerAccess ? (
-                <>
-                  {/* Create New Event */}
-                  <button
-                    onClick={() => setView("criar")}
-                    className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
-                  >
-                    Criar Novo Evento
-                  </button>
-                  {/* Separator */}
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">ou</span>
-                    </div>
-                  </div>
-                  {/* Access Existing Event */}
-                  <input
-                    type="text"
-                    placeholder="Código do evento / celular (com DDD)"
-                    value={eventAccessCode}
-                    onChange={handleInputChange}
-                    maxLength={15}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  />
-                  <button
-                    onClick={handleAccessClick}
-                    disabled={loading || !isInputValid}
-                    className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Acessar Evento
-                  </button>
-                </>
-              ) : (
-                /* Only render SMS verification component when phone flow is triggered */
-                (digitsOnly.length === 10 || digitsOnly.length === 11) && (
-                  <EventAccessCode
-                    recuperarPorCelular={retrieveCodeByPhone}
-                    checkEventsByPhone={checkEventsByPhone}
-                    recuperarEventoPorCelular={recuperarEventoPorCelular}
-                    loading={loading}
-                    phoneNumber={eventAccessCode}
-                    triggerAccess={triggerAccess}
-                    onReset={handleReset}
-                  />
-                )
-              )}
+              {/* Create New Event */}
+              <button
+                onClick={() => setView("criar")}
+                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
+              >
+                Criar Novo Evento
+              </button>
+              {/* Separator */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">ou</span>
+                </div>
+              </div>
+              {/* Access Existing Event */}
+              <input
+                type="text"
+                placeholder="Código do evento / celular (com DDD)"
+                value={eventAccessCode}
+                onChange={handleInputChange}
+                maxLength={15}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+              />
+              <button
+                onClick={handleAccessClick}
+                disabled={loading || !isInputValid}
+                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Acessar Evento
+              </button>
             </>
           )}
         </div>

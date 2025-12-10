@@ -254,7 +254,8 @@ export default function EventAccessCode({
   const handleSelectEvent = async (eventCode) => {
     if (recuperarEventoPorCelular) {
       await recuperarEventoPorCelular(eventCode, phoneNumber);
-      reset();
+      // Do NOT call reset() here, as it might clear state before navigation completes
+      // The context function (recuperarEventoPorCelular) handles navigation (setView)
     }
   };
 
@@ -333,21 +334,21 @@ export default function EventAccessCode({
             Selecione qual deseja acessar:
           </p>
           <div className="flex flex-col gap-2">
-            {matches.map((m) => (
+            {matches.map((eventMatch) => (
               <div
-                key={m.event.code}
+                key={eventMatch.event.code}
                 className="flex flex-col gap-3 p-3 bg-white rounded-lg border items-center justify-between sm:flex-row"
               >
                 <div className="text-center sm:text-left">
                   <div className="font-medium text-gray-800">
-                    {m.event.name}
+                    {eventMatch.event.name}
                   </div>
                   <div className="text-xs text-gray-500">
-                    Código: {m.event.code}
+                    Código: {eventMatch.event.code}
                   </div>
                 </div>
                 <button
-                  onClick={() => handleSelectEvent(m.event.code)}
+                  onClick={() => handleSelectEvent(eventMatch.event.code)}
                   className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg inline-flex items-center gap-2 justify-center font-medium transition"
                 >
                   <span>Acessar</span>
