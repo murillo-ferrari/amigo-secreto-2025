@@ -221,7 +221,7 @@ export default function EventAccessCode({
         const eventCode = normalized[0].event?.code;
         if (eventCode && recuperarEventoPorCelular) {
           await recuperarEventoPorCelular(eventCode, phoneNumber);
-          reset();
+          // Do NOT call reset() here, as it triggers onReset which redirects to home
           return;
         }
       }
