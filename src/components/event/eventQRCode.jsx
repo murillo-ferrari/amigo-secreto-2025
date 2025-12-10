@@ -66,7 +66,7 @@ export default function QRCodeCard({
   return (
     <div className="flex flex-col gap-2 w-full rounded-lg text-center">
       <p className="font-semibold text-gray-800">{label}</p>
-      <div className="flex flex-row gap-2 items-center justify-center">
+      <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
         <img
           src={qrSrc}
           alt="QR Code"
@@ -86,6 +86,9 @@ export default function QRCodeCard({
                 className="p-1.5 h-auto w-auto bg-transparent hover:bg-gray-200 text-gray-600"
                 label={<Copy size={16} />}
                 copiedLabel={<Copy size={16} className="text-green-600" />}
+                onCopy={() => {
+                  message.success({ message: "Código do evento copiado!" });
+                }}
               />
             </div>
           </div>
@@ -101,6 +104,9 @@ export default function QRCodeCard({
             className="px-3 py-2"
             label="Copiar link"
             copiedLabel="Link copiado!"
+            onCopy={() => {
+              message.success({ message: "Link do evento copiado!" });
+            }}
           />
         </div>
       </div>

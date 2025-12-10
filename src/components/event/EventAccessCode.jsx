@@ -265,11 +265,11 @@ export default function EventAccessCode({
   }
 
   return (
-    <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
+    <div className="bg-gray-50 p-4 rounded-lg border">
       {/* Sending SMS */}
       {step === "sending" && (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-3"></div>
           <p className="text-gray-700">
             Enviando código SMS para {formatMobileNumber(phoneNumber)}...
           </p>
@@ -278,7 +278,7 @@ export default function EventAccessCode({
 
       {/* Enter SMS Code */}
       {step === "code" && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-4">
           <p className="text-sm text-gray-700 text-center">
             Digite o código de 6 dígitos enviado para
             <br />
@@ -319,7 +319,7 @@ export default function EventAccessCode({
       {/* Searching */}
       {step === "searching" && (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-3"></div>
           <p className="text-gray-700">Buscando seus eventos...</p>
         </div>
       )}

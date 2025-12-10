@@ -59,10 +59,10 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
         <div className="flex flex-col gap-2 p-4 bg-red-50 rounded-lg border border-red-100">
             <h3 className="flex gap-2 items-center font-semibold text-gray-800">
                 <span className="bg-red-100 p-1 rounded">🧒</span>
-                Incluir Filhos/Dependentes
+                Incluir Filhos
             </h3>
             <p className="text-sm text-gray-600">
-                Adicione filhos ou dependentes que participarão do sorteio, mas não têm
+                Adicione crianças que participarão do sorteio, mas não têm
                 celular próprio
             </p>
 
@@ -72,7 +72,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                     placeholder="Nome da criança"
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                    className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg"
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
@@ -82,10 +82,10 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                 />
                 <button
                     onClick={addParticipantChild}
-                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition"
+                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition shrink-0"
                     title="Adicionar criança"
                 >
-                    <Plus className="w-5 h-5" />
+                    <Plus className="w-4 h-4" />
                 </button>
             </div>
 
@@ -95,7 +95,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                     return (
                         <div
                             key={index}
-                            className="flex flex-col gap-2 bg-white p-3 rounded border border-gray-200"
+                            className="flex flex-col gap-2 bg-white p-2 rounded border border-gray-200"
                         >
                             <div className="flex justify-between items-center">
                                 <span className="font-semibold text-red-800">
@@ -110,7 +110,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                             </div>
 
                             <div className="flex flex-col gap-2 pl-2 border-l-2 border-red-100">
-                                <div className="flex gap-2">
+                                <div className="flex gap-1">
                                     <input
                                         type="text"
                                         placeholder={`Sugestão de presente para ${childData.name}`}
@@ -121,7 +121,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                                                 [index]: e.target.value,
                                             })
                                         }
-                                        className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded"
+                                        className="flex-1 min-w-0 px-3 py-1 text-sm border border-gray-300 rounded"
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
@@ -131,7 +131,7 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
                                     />
                                     <button
                                         onClick={() => addChildGift(index)}
-                                        className="text-red-500 hover:text-red-700 font-bold px-2"
+                                        className="text-red-500 hover:text-red-700 font-bold px-2 shrink-0"
                                     >
                                         +
                                     </button>

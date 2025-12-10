@@ -1,16 +1,17 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Copy, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useEvent } from "../../context/EventContext";
 import firebaseStorage from "../../firebase";
 import {
   createUniqueCode,
-  getPersistableEvent,
   formatMobileNumber,
-  verifyMobileNumber,
-  obfuscatePhone,
+  getPersistableEvent,
   hashPhone,
   normalizeChild,
+  obfuscatePhone,
+  verifyMobileNumber,
 } from "../../utils/helpers";
+import CopyButton from "../common/CopyButton";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
@@ -98,9 +99,9 @@ export default function CriarEvento() {
       suggestedValue: suggestedValue,
       plannedDrawDate: plannedDrawDate
         ? (() => {
-            const [y, m, d] = plannedDrawDate.split("-");
-            return new Date(y, m - 1, d, 12, 0, 0).getTime();
-          })()
+          const [y, m, d] = plannedDrawDate.split("-");
+          return new Date(y, m - 1, d, 12, 0, 0).getTime();
+        })()
         : null,
       includeChildrenOption: includeChildren,
       code: eventUniqueCode,
@@ -191,7 +192,7 @@ export default function CriarEvento() {
                       Valor Sugerido (opcional)
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       placeholder="Ex: R$ 50,00"
                       value={suggestedValue}
                       onChange={(event) => setSuggestedValue(event.target.value)}
@@ -321,17 +322,30 @@ export default function CriarEvento() {
               )}
             </>
           ) : (
-            <div className="space-y-4 text-center">
-              <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 text-center">
-                <p className="text-green-800 font-semibold mb-2">
+            <div className="flex flex-col text-center">
+              <div className="flex flex-col gap-2 bg-green-50 border-l-4 border-green-500 rounded-lg p-4 text-center">
+                <p className="text-green-800 font-semibold">
                   Evento criado com sucesso!
                 </p>
-                <p className="text-sm text-gray-700 mb-4">Código do evento:</p>
-                <p className="text-3xl font-bold text-green-800 mb-4">
-                  {createdEvent.code}
-                </p>
-                <p className="text-sm text-gray-600 mb-4">
-                  Você já foi cadastrado como administrador.
+                <div className="flex flex-col text-center items-center gap-1 p-2 rounded-lg border border-l-4 border-green-400">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Código do Evento</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-2xl font-bold text-gray-800 tracking-widest">
+                      {createdEvent.code}
+                    </p>
+                    <CopyButton
+                      text={createdEvent.code}
+                      className="p-2 h-auto w-auto bg-transparent hover:bg-gray-200 text-gray-600"
+                      label={<Copy size={16} />}
+                      copiedLabel={<Copy size={16} className="text-green-600" />}
+                      onCopy={() => {
+                        message.success({ message: "Código do evento copiado!" });
+                      }}
+                    />
+                  </div>
+                </div>
+                <p className="text-md text-gray-600">
+                  Você foi cadastrado como <strong>administrador</strong>.
                 </p>
                 <div className="flex gap-2 justify-center">
                   <button

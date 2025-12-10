@@ -496,8 +496,8 @@ export default function EventParticipant() {
             placeholder="Ex: Livro, camiseta, caneca..."
             value={newGift}
             onChange={(e) => updateNewGift(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addGift()}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+            onKeyDown={(e) => e.key === "Enter" && addGift()}
+            className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg"
           />
           <button
             onClick={addGift}
@@ -542,11 +542,11 @@ export default function EventParticipant() {
       </button>
 
       {currentEvent && !isDrawComplete && (
-        <div className="py-4">
+        <div>
           <QRCodeCard
             url={`${window.location.origin}?code=${currentEvent.code}`}
             label="Compartilhe este evento"
-            size={200}
+            size={192}
             eventName={currentEvent.name}
           />
         </div>

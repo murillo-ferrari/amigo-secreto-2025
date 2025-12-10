@@ -5,6 +5,7 @@ export default function CopyButton({
   className,
   label = "Copiar",
   copiedLabel = "Copiado!",
+  onCopy, // Add this prop
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -13,6 +14,11 @@ export default function CopyButton({
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
+      
+      // Call the onCopy callback if provided
+      if (onCopy) {
+        onCopy(text);
+      }
     } catch (e) {
       console.error("Copy failed", e);
     }
