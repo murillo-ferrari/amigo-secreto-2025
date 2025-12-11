@@ -31,3 +31,6 @@ dist-ssr
 
 # Firebase cache files
 .firebase/
+
+# GitHub files
+.github/

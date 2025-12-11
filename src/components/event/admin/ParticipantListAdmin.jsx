@@ -165,10 +165,10 @@ export default function ParticipantListAdmin({
                                                     return (
                                                         <span className="flex items-center gap-2">
                                                             <span
-                                                                className={`${isRevealed ? "" : "blur-sm"}`}
+                                                                className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
                                                                 aria-hidden={!isRevealed}
                                                             >
-                                                                {recipient}
+                                                                {isRevealed ? recipient : "—"}
                                                             </span>
                                                             <button
                                                                 onClick={() => toggleReveal(key)}
@@ -209,10 +209,10 @@ export default function ParticipantListAdmin({
                                                         <p className="text-sm flex items-center gap-2">
                                                             <strong>{childName}</strong> tirou
                                                             <span
-                                                                className={`${isRevealed ? "" : "blur-sm"}`}
+                                                                className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
                                                                 aria-hidden={!isRevealed}
                                                             >
-                                                                {recipient}
+                                                                {isRevealed ? recipient : "—"}
                                                             </span>
                                                             <button
                                                                 onClick={() => toggleReveal(key)}
