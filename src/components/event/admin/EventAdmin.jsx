@@ -412,7 +412,9 @@ export default function AdminEvento() {
       <div className="flex flex-col gap-4 max-w-md mx-auto">
         <Header />
         <button
-          onClick={() => setView("home")}
+          onClick={() =>
+            setView(currentEvent?.drawn ? "resultado" : currentEvent ? "evento" : "home")
+          }
           className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
