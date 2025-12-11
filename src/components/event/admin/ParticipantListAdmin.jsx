@@ -32,7 +32,7 @@ export default function ParticipantListAdmin({
 
     return (
         <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row items-center justify-between">
                 <h3 className="flex items-center gap-2 font-semibold text-gray-800">
                     <Users className="w-5 h-5" />
                     Participantes (
@@ -88,24 +88,24 @@ export default function ParticipantListAdmin({
                         const start = (currentPage - 1) * pageSize;
                         const end = Math.min(start + pageSize, totalParticipants);
                         const pageItems = participants.slice(start, end);
-                        return pageItems.map((p) => (
-                            <div key={p.id} className="border border-gray-200 rounded-lg p-3">
+                        return pageItems.map((participant) => (
+                            <div key={participant.id} className="border border-gray-200 rounded-lg p-3">
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex flex-col flex-1">
-                                        <p className="font-semibold text-gray-800">{p.name}</p>
-                                        <p className="text-sm text-gray-600">{displayPhone(p)}</p>
-                                        {p.gifts && p.gifts.length > 0 && p.children && p.children.length > 0 && (
+                                        <p className="font-semibold text-gray-800">{participant.name}</p>
+                                        <p className="text-sm text-gray-600">{displayPhone(participant)}</p>
+                                        {participant.gifts && participant.gifts.length > 0 && participant.children && participant.children.length > 0 && (
                                             <div className="border-b border-gray-200 pb-2">
                                                 <p className="text-sm text-gray-500">
-                                                    Sugestões: {p.gifts.join(", ")}
+                                                    Sugestões: {participant.gifts.join(", ")}
                                                 </p>
                                             </div>
                                         )}
-                                        {p.children && p.children.length > 0 && (
+                                        {participant.children && participant.children.length > 0 && (
                                             <div className="mt-2">
                                                 <p className="text-md font-semibold text-gray-700">Filhos:</p>
                                                 <div className="pl-3 border-l-2 border-gray-200">
-                                                    {p.children.map((child, idx) => {
+                                                    {participant.children.map((child, idx) => {
                                                         const name = typeof child === "string" ? child : child.name;
                                                         const gifts = (typeof child !== "string" && child.gifts) ? child.gifts : [];
 
@@ -128,9 +128,9 @@ export default function ParticipantListAdmin({
                                     <div className="flex items-center gap-2">
                                         {!currentEvent.drawn &&
                                             // Do not allow deleting the admin participant
-                                            ((currentEvent?.adminParticipantId || p.isAdmin) &&
-                                                (currentEvent.adminParticipantId === p.id ||
-                                                    p.isAdmin) ? (
+                                            ((currentEvent?.adminParticipantId || participant.isAdmin) &&
+                                                (currentEvent.adminParticipantId === participant.id ||
+                                                    participant.isAdmin) ? (
                                                 <button
                                                     disabled
                                                     className="text-gray-300 cursor-not-allowed"
@@ -140,7 +140,7 @@ export default function ParticipantListAdmin({
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => onRemoveParticipant(p.id)}
+                                                    onClick={() => onRemoveParticipant(participant.id)}
                                                     className="text-red-500 hover:text-red-700"
                                                     title="Excluir participante"
                                                 >
@@ -154,12 +154,12 @@ export default function ParticipantListAdmin({
                                     <div className="flex flex-col border-t pt-2">
                                         <div className="flex justify-between items-center">
                                             <p className="text-sm flex items-center gap-2">
-                                                <strong>{p.name}</strong> tirou
+                                                <strong>{participant.name}</strong> tirou
                                                 {(() => {
                                                     const recipient = safeName(
-                                                        currentEvent.draw?.[p.name]
+                                                        currentEvent.draw?.[participant.name]
                                                     );
-                                                    const key = `${p.id}::self`;
+                                                    const key = `${participant.id}::self`;
                                                     const isRevealed = !!revealed[key];
 
                                                     return (
@@ -168,7 +168,7 @@ export default function ParticipantListAdmin({
                                                                 className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
                                                                 aria-hidden={!isRevealed}
                                                             >
-                                                                {isRevealed ? recipient : "—"}
+                                                                {isRevealed ? <strong>{recipient}</strong> : "—"}
                                                             </span>
                                                             <button
                                                                 onClick={() => toggleReveal(key)}
@@ -187,18 +187,18 @@ export default function ParticipantListAdmin({
                                                 })()}
                                             </p>
                                         </div>
-                                        {p.children &&
-                                            p.children.map((filho) => {
+                                        {participant.children &&
+                                            participant.children.map((child) => {
                                                 const childName =
-                                                    typeof filho === "string"
-                                                        ? filho
-                                                        : filho && filho.name
-                                                            ? filho.name
-                                                            : String(filho);
+                                                    typeof child === "string"
+                                                        ? child
+                                                        : child && child.name
+                                                            ? child.name
+                                                            : String(child);
                                                 const recipient = safeName(
                                                     currentEvent.draw?.[childName]
                                                 );
-                                                const key = `${p.id}::child::${childName}`;
+                                                const key = `${participant.id}::child::${childName}`;
                                                 const isRevealed = !!revealed[key];
 
                                                 return (
@@ -212,7 +212,7 @@ export default function ParticipantListAdmin({
                                                                 className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
                                                                 aria-hidden={!isRevealed}
                                                             >
-                                                                {isRevealed ? recipient : "—"}
+                                                                {isRevealed ? <strong>{recipient}</strong> : "—"}
                                                             </span>
                                                             <button
                                                                 onClick={() => toggleReveal(key)}
