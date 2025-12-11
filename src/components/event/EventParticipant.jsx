@@ -285,6 +285,28 @@ export default function EventParticipant() {
     // Update local state to reflect the change (we keep the in-memory event object)
     updateCurrentEvent(updatedEvent);
     updateEventList({ ...eventList, [currentEvent.code]: updatedEvent });
+    // Ensure the participant form fields are in sync with the updated currentParticipant
+    const updatedCurrentParticipant = updatedEvent.currentParticipant;
+    if (updatedCurrentParticipant) {
+      updateParticipantsChildren(updatedCurrentParticipant.children || []);
+      updateGifts(updatedCurrentParticipant.gifts || []);
+      updateParticipantName(updatedCurrentParticipant.name || "");
+
+      // Deobfuscate phone for display if needed
+      let phoneForDisplay = updatedCurrentParticipant.mobilePhone || "";
+      if (isObfuscated(phoneForDisplay)) {
+        try {
+          const key = (updatedEvent?.code || "") + updatedCurrentParticipant.id;
+          const deob = deobfuscatePhone(phoneForDisplay, key);
+          phoneForDisplay = formatMobileNumber(deob);
+        } catch (err) {
+          console.warn("Failed to deobfuscate phone for updated participant:", err);
+        }
+      } else {
+        phoneForDisplay = formatMobileNumber(phoneForDisplay);
+      }
+      updateParticipantPhone(phoneForDisplay || "");
+    }
     // After updating participant info while in draw mode, return to results
     if (updatedEvent.drawn) {
       if (setForceEditParticipant) setForceEditParticipant(false);
@@ -323,6 +345,11 @@ export default function EventParticipant() {
         participants: await updateExistingParticipant(existingParticipant),
       };
       createdParticipantId = existingParticipant.id;
+
+      // Make sure the currentParticipant is updated to reflect new participant data
+      const updatedParticipant = updatedEvent.participants
+        .find((participant) => participant.id === existingParticipant.id);
+      if (updatedParticipant) updatedEvent.currentParticipant = updatedParticipant;
     } else {
       isNewParticipant = true;
       const newParticipant = await createNewParticipant();
@@ -341,6 +368,9 @@ export default function EventParticipant() {
         ...currentEvent,
         participants: [...eventParticipants, newParticipant],
       };
+
+      // If this user or flow is currently the active participant, set it as currentParticipant
+      updatedEvent.currentParticipant = newParticipant;
 
       if (isForcedAdmin) {
         // Persist adminParticipantId at event root so ownership is recorded
@@ -624,7 +654,7 @@ export default function EventParticipant() {
         </div>
       )}
 
-      <div>
+      <div className="flex flex-col gap-2">
         <p className="font-semibold text-gray-800 text-sm text-gray-600">
           Participantes:{" "}
           {includeChildren
@@ -632,7 +662,7 @@ export default function EventParticipant() {
             : eventParticipants.length}
           {hasChildren ? ", incluindo filhos" : ""}
         </p>
-        <ul className="grid grid-cols-2 gap-1 list-disc pl-5">
+        <ul className="grid grid-cols-2 gap-2 list-disc list-inside">
           {eventParticipants
             .slice()
             .sort((a, b) =>
@@ -657,7 +687,7 @@ export default function EventParticipant() {
         {participant.name}
 
         {sortedChildrenList.length > 0 && (
-          <ul className="list-[circle] pl-5 text-gray-600 font-normal">
+          <ul className="list-[circle] list-inside pl-5 text-gray-600 font-normal">
             {sortedChildrenList.map((child, i) => {
               const childName = typeof child === "string" ? child : child.name;
               return <li key={i}>{childName}</li>;

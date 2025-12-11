@@ -128,9 +128,9 @@ export default function AdminEvento() {
       /* Planned draw date is a timestamp with midday hour */
       plannedDrawDate: plannedDrawDate
         ? (() => {
-            const [y, m, d] = plannedDrawDate.split("-");
-            return new Date(y, m - 1, d, 12, 0, 0).getTime();
-          })()
+          const [y, m, d] = plannedDrawDate.split("-");
+          return new Date(y, m - 1, d, 12, 0, 0).getTime();
+        })()
         : null,
     };
 
@@ -166,8 +166,8 @@ export default function AdminEvento() {
         `event:${currentEvent.code}`,
         JSON.stringify(getPersistableEvent(eventToStore))
       );
-      // Keep state for UI
-      const updatedEventForState = { ...updatedEvent };
+      // Keep state for UI (preserve transient currentParticipant)
+      const updatedEventForState = { ...updatedEvent, currentParticipant: currentEvent.currentParticipant };
       updateCurrentEvent(updatedEventForState);
       updateEventList({
         ...eventList,

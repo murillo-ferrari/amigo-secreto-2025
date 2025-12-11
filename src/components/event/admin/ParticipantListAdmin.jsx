@@ -45,12 +45,12 @@ export default function ParticipantListAdmin({
                     <div>
                         {(() => {
                             const allKeys = [];
-                            participants.forEach((pp) => {
-                                allKeys.push(`${pp.id}::self`);
-                                if (pp.children) {
-                                    pp.children.forEach((c) => {
+                            participants.forEach((participant) => {
+                                allKeys.push(`${participant.id}::self`);
+                                if (participant.children) {
+                                    participant.children.forEach((c) => {
                                         const childName = typeof c === "string" ? c : c && c.name ? c.name : String(c);
-                                        allKeys.push(`${pp.id}::child::${childName}`);
+                                        allKeys.push(`${participant.id}::child::${childName}`);
                                     });
                                 }
                             });
