@@ -1,0 +1,302 @@
+{
+  "repo_notes": [
+    {
+      "content": "# Amigo Secreto Documentation\n\nThis wiki documents a web-based Secret Santa (Amigo Secreto) application built with React and Firebase. The application enables users to create and participate in gift exchange events with secure phone-based authentication."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduce the Amigo Secreto (Secret Santa) application, its purpose, key features, and technology stack",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Getting Started",
+      "purpose": "Installation instructions, environment setup, and running the application locally",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Project Structure",
+      "purpose": "Overview of the codebase organization, folder structure, and module dependencies",
+      "parent": "Overview",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "System Architecture",
+      "purpose": "High-level system design, architectural patterns, and component relationships",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Firebase Integration",
+      "purpose": "Comprehensive guide to Firebase setup, SDK wrapper, authentication services, and Realtime Database integration",
+      "parent": "System Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "State Management",
+      "purpose": "React Context architecture, EventContext, FirebaseContext, MessageContext, and global state flow",
+      "parent": "System Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Security Architecture",
+      "purpose": "Security model including database rules, authorization patterns, and phone number protection strategies",
+      "parent": "System Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Event Lifecycle",
+      "purpose": "Overview of the complete event workflow from creation through draw to results",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Event Creation Flow",
+      "purpose": "Detailed documentation of the event creation component, form validation, admin setup, and initial persistence",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Event Home & Access",
+      "purpose": "Event discovery interface, access code validation, phone number handling, and routing logic",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Participant Registration",
+      "purpose": "Comprehensive guide to participant registration, phone verification, gift management, and children inclusion",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Event Administration",
+      "purpose": "Admin panel features, authorization checks, participant management, and event controls",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Secret Santa Draw Algorithm",
+      "purpose": "In-depth technical explanation of the draw algorithm, constraint satisfaction, and result persistence",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Viewing Results",
+      "purpose": "Results display, participant authentication, and result access patterns",
+      "parent": "Event Lifecycle",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Authentication System",
+      "purpose": "Phone-based authentication architecture, SMS verification flow, and session management",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Phone Verification Flow",
+      "purpose": "Step-by-step SMS verification process, reCAPTCHA integration, and credential linking",
+      "parent": "Authentication System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Phone Number Security",
+      "purpose": "Phone number hashing, obfuscation, indexing, and privacy protection mechanisms",
+      "parent": "Authentication System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Authorization Model",
+      "purpose": "Authorization patterns, admin detection, and access control throughout the application",
+      "parent": "Authentication System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Data Layer",
+      "purpose": "Data persistence, event service, and database interactions",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Event Service",
+      "purpose": "Event CRUD operations, search functionality, and business logic layer",
+      "parent": "Data Layer",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Firebase Storage Wrapper",
+      "purpose": "firebaseStorage module, database operations, authentication helpers, and phone indexing",
+      "parent": "Data Layer",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Data Models",
+      "purpose": "Event, Participant, Child, and Draw data structures and schemas",
+      "parent": "Data Layer",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Database Security Rules",
+      "purpose": "Firebase Realtime Database security rules, access patterns, and authorization logic",
+      "parent": "Data Layer",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "UI Components",
+      "purpose": "Component library overview, common components, and design patterns",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Layout Components",
+      "purpose": "Header and Footer components, version display, and verified status indicators",
+      "parent": "UI Components",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Common Components",
+      "purpose": "Reusable components including CopyButton, Spinner, ErrorScreen, and QRCodeCard",
+      "parent": "UI Components",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Messaging System",
+      "purpose": "Toast notifications, confirmation modals, and user feedback patterns",
+      "parent": "UI Components",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Form Components",
+      "purpose": "ChildrenForm and form patterns used throughout the application",
+      "parent": "UI Components",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Utilities & Helpers",
+      "purpose": "Utility functions, formatters, validators, and helper modules",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Helper Functions",
+      "purpose": "Formatting, validation, normalization, and data transformation utilities",
+      "parent": "Utilities & Helpers",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    }
+  ]
+}
