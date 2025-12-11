@@ -11,9 +11,12 @@ export default function versionIncrement() {
     name: "version-increment",
     buildStart() {
       // Only increment during production builds
-      if (process.env.NODE_ENV !== "production") {
-        return;
-      }
+      const isProd =
+        typeof globalThis !== "undefined" &&
+        globalThis.process &&
+        globalThis.process.env &&
+        globalThis.process.env.NODE_ENV === "production";
+      if (!isProd) return;
 
       const versionPath = path.resolve("src/version.json");
 
@@ -23,12 +26,34 @@ export default function versionIncrement() {
         const currentVersion = versionData.build || "0.0.0";
 
         // Parse semantic version (major.minor.patch)
-        const parts = String(currentVersion).split(".").map(Number);
+        const parts = String(currentVersion)
+          .split(".")
+          .map((p) => {
+            const n = Number(p);
+            return Number.isFinite(n) ? n : 0;
+          });
         const major = parts[0] || 0;
         const minor = parts[1] || 0;
-        const patch = (parts[2] || 0) + 1;
+        const patch = parts[2] || 0;
 
-        const newVersion = `${major}.${minor}.${patch}`;
+        // Increment patch and apply rollovers:
+        // - Patch rolls to 0 and increments minor when it reaches 100
+        // - Minor rolls to 0 and increments major when it reaches 10
+        let newMajor = major;
+        let newMinor = minor;
+        let newPatch = patch + 1;
+
+        if (newPatch >= 100) {
+          newPatch = 0;
+          newMinor = newMinor + 1;
+        }
+
+        if (newMinor >= 10) {
+          newMinor = 0;
+          newMajor = newMajor + 1;
+        }
+
+        const newVersion = `${newMajor}.${newMinor}.${newPatch}`;
         versionData.build = newVersion;
 
         fs.writeFileSync(
