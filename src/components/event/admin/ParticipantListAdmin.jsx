@@ -1,4 +1,4 @@
-import { Trash2, Users } from "lucide-react";
+import { Trash2, Users, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { calculateTotalParticipants } from "../../../utils/helpers";
 
@@ -17,6 +17,11 @@ export default function ParticipantListAdmin({
     const currentPage = Math.min(Math.max(1, page), totalPages);
 
     const isDrawn = !!currentEvent?.drawn;
+    const [revealed, setRevealed] = useState({});
+
+    const toggleReveal = (key) => {
+        setRevealed((prev) => ({ ...prev, [key]: !prev[key] }));
+    };
 
     const safeName = (val) => {
         if (val == null) return "";
@@ -27,14 +32,51 @@ export default function ParticipantListAdmin({
 
     return (
         <div className="flex flex-col gap-2">
-            <h3 className="flex items-center gap-2 font-semibold text-gray-800">
-                <Users className="w-5 h-5" />
-                Participantes (
-                {includeChildren
-                    ? calculateTotalParticipants(participants)
-                    : participants.length}
-                {includeChildren && hasAnyFilhos ? ", incluindo filhos" : ""})
-            </h3>
+            <div className="flex items-center justify-between">
+                <h3 className="flex items-center gap-2 font-semibold text-gray-800">
+                    <Users className="w-5 h-5" />
+                    Participantes (
+                    {includeChildren
+                        ? calculateTotalParticipants(participants)
+                        : participants.length}
+                    {includeChildren && hasAnyFilhos ? ", incluindo filhos" : ""})
+                </h3>
+                {isDrawn && (
+                    <div>
+                        {(() => {
+                            const allKeys = [];
+                            participants.forEach((pp) => {
+                                allKeys.push(`${pp.id}::self`);
+                                if (pp.children) {
+                                    pp.children.forEach((c) => {
+                                        const childName = typeof c === "string" ? c : c && c.name ? c.name : String(c);
+                                        allKeys.push(`${pp.id}::child::${childName}`);
+                                    });
+                                }
+                            });
+
+                            const allRevealed = allKeys.length > 0 && allKeys.every((k) => !!revealed[k]);
+
+                            const toggleRevealAll = () => {
+                                const value = !allRevealed;
+                                const newMap = {};
+                                allKeys.forEach((k) => (newMap[k] = value));
+                                setRevealed((prev) => ({ ...prev, ...newMap }));
+                            };
+
+                            return (
+                                <button
+                                    onClick={toggleRevealAll}
+                                    className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                                    title={allRevealed ? "Ocultar tudo" : "Revelar tudo"}
+                                >
+                                    {allRevealed ? <><EyeOff className="w-4 h-4" /> Ocultar tudo</> : <><Eye className="w-4 h-4" /> Revelar tudo</>}
+                                </button>
+                            );
+                        })()}
+                    </div>
+                )}
+            </div>
 
             {participants.length === 0 ? (
                 <p className="text-gray-500 text-sm">
@@ -111,9 +153,38 @@ export default function ParticipantListAdmin({
                                 {isDrawn && (
                                     <div className="flex flex-col border-t pt-2">
                                         <div className="flex justify-between items-center">
-                                            <p className="text-sm">
-                                                <strong>{p.name}</strong> tirou{" "}
-                                                {safeName(currentEvent.draw[p.name])}
+                                            <p className="text-sm flex items-center gap-2">
+                                                <strong>{p.name}</strong> tirou
+                                                {(() => {
+                                                    const recipient = safeName(
+                                                        currentEvent.draw?.[p.name]
+                                                    );
+                                                    const key = `${p.id}::self`;
+                                                    const isRevealed = !!revealed[key];
+
+                                                    return (
+                                                        <span className="flex items-center gap-2">
+                                                            <span
+                                                                className={`${isRevealed ? "" : "blur-sm"}`}
+                                                                aria-hidden={!isRevealed}
+                                                            >
+                                                                {recipient}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => toggleReveal(key)}
+                                                                title={isRevealed ? "Ocultar" : "Revelar"}
+                                                                className="text-gray-500 hover:text-gray-800"
+                                                                aria-pressed={isRevealed}
+                                                            >
+                                                                {isRevealed ? (
+                                                                    <EyeOff className="w-4 h-4" />
+                                                                ) : (
+                                                                    <Eye className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                        </span>
+                                                    );
+                                                })()}
                                             </p>
                                         </div>
                                         {p.children &&
@@ -124,14 +195,37 @@ export default function ParticipantListAdmin({
                                                         : filho && filho.name
                                                             ? filho.name
                                                             : String(filho);
+                                                const recipient = safeName(
+                                                    currentEvent.draw?.[childName]
+                                                );
+                                                const key = `${p.id}::child::${childName}`;
+                                                const isRevealed = !!revealed[key];
+
                                                 return (
                                                     <div
                                                         key={childName}
                                                         className="flex justify-between items-center"
                                                     >
-                                                        <p className="text-sm">
-                                                            <strong>{childName}</strong> tirou{" "}
-                                                            {safeName(currentEvent.draw[childName])}
+                                                        <p className="text-sm flex items-center gap-2">
+                                                            <strong>{childName}</strong> tirou
+                                                            <span
+                                                                className={`${isRevealed ? "" : "blur-sm"}`}
+                                                                aria-hidden={!isRevealed}
+                                                            >
+                                                                {recipient}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => toggleReveal(key)}
+                                                                title={isRevealed ? "Ocultar" : "Revelar"}
+                                                                className="text-gray-500 hover:text-gray-800"
+                                                                aria-pressed={isRevealed}
+                                                            >
+                                                                {isRevealed ? (
+                                                                    <EyeOff className="w-4 h-4" />
+                                                                ) : (
+                                                                    <Eye className="w-4 h-4" />
+                                                                )}
+                                                            </button>
                                                         </p>
                                                     </div>
                                                 );
