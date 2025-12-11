@@ -268,10 +268,10 @@ export default function EventParticipant() {
         try {
           await firebaseStorage.setPhoneIndex(newNorm, currentEvent.code);
           console.debug(`Set phone index ${newNorm} -> ${currentEvent.code}`);
-        } catch (err) {
+        } catch (error) {
           console.warn(
             "Erro ao criar índice de telefone:",
-            err,
+            error,
             newNorm,
             currentEvent.code
           );
@@ -310,7 +310,7 @@ export default function EventParticipant() {
     // After updating participant info while in draw mode, return to results
     if (updatedEvent.drawn) {
       if (setForceEditParticipant) setForceEditParticipant(false);
-      updateView("resultado");
+      updateView("result");
     }
   };
 
@@ -414,10 +414,10 @@ export default function EventParticipant() {
               console.debug(
                 `Set phone index ${newNorm} -> ${currentEvent.code}`
               );
-            } catch (err) {
+            } catch (error) {
               console.warn(
                 "Erro ao criar índice de telefone (admin flow):",
-                err,
+                error,
                 newNorm,
                 currentEvent.code
               );
@@ -510,7 +510,7 @@ export default function EventParticipant() {
           currentParticipant: matchLegacy,
         });
         setAccessedViaParticipantCode(true);
-        updateView("resultado");
+        updateView("result");
         return;
       }
 
@@ -525,7 +525,7 @@ export default function EventParticipant() {
       currentParticipant: foundParticipant,
     });
     setAccessedViaParticipantCode(true);
-    updateView("resultado");
+    updateView("result");
   };
 
   // ===== Render Helpers =====
@@ -634,7 +634,7 @@ export default function EventParticipant() {
             onClick={() => {
               setEditingAfterDraw(false);
               if (setForceEditParticipant) setForceEditParticipant(false);
-              updateView("resultado");
+              updateView("result");
             }}
             className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition"
           >
@@ -760,7 +760,7 @@ export default function EventParticipant() {
         <button
           onClick={() =>
             updateView(
-              accessedViaParticipantCode && currentEvent?.drawn ? "resultado" : "home"
+              accessedViaParticipantCode && currentEvent?.drawn ? "result" : "home"
             )
           }
           className="text-left text-gray-600 hover:text-gray-800"

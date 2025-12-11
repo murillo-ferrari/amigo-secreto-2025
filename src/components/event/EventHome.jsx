@@ -32,7 +32,7 @@ export default function Home() {
 
     // If user entered a phone number (10 or 11 digits), switch to verification view
     if (digits.length === 10 || digits.length === 11) {
-      setView("verificar-telefone");
+      setView("verify-phone");
       return;
     }
 
@@ -108,7 +108,7 @@ export default function Home() {
             <>
               {/* Create New Event */}
               <button
-                onClick={() => setView("criar")}
+                onClick={() => setView("create")}
                 className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600 transition"
               >
                 Criar Novo Evento

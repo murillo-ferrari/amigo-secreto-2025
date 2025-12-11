@@ -413,7 +413,7 @@ export default function AdminEvento() {
         <Header />
         <button
           onClick={() =>
-            setView(currentEvent?.drawn ? "resultado" : currentEvent ? "evento" : "home")
+            setView(currentEvent?.drawn ? "result" : currentEvent ? "event" : "home")
           }
           className="text-left text-gray-600 hover:text-gray-800"
         >

@@ -202,7 +202,7 @@ export default function SecretSantaResults() {
                 onClick={() => {
                   // Ask context to force edit participant after draw
                   setForceEditParticipant(true);
-                  setView("evento");
+                  setView("event");
                 }}
                 className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition"
               >

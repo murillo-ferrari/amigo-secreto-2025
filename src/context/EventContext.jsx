@@ -76,7 +76,7 @@ export const EventProvider = ({ children }) => {
 
     const handleExistingParticipantWithDraw = (foundEvent, foundParticipant) => {
         setCurrentEvent({ ...foundEvent, currentParticipant: foundParticipant });
-        setView("resultado");
+        setView("result");
         setAccessCode("");
         setAccessedViaParticipantCode(true);
     };
@@ -96,7 +96,7 @@ export const EventProvider = ({ children }) => {
 
         setParticipantChildren(foundParticipant.children || []);
         setGifts(foundParticipant.gifts || []);
-        setView("evento");
+        setView("event");
         setAccessCode("");
         setAccessedViaParticipantCode(true);
     };
@@ -107,7 +107,7 @@ export const EventProvider = ({ children }) => {
         setParticipantMobileNumber("");
         setParticipantChildren([]);
         setGifts([]);
-        setView("evento");
+        setView("event");
         setAccessCode("");
         setAccessedViaParticipantCode(false);
     };

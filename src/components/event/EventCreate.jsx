@@ -17,7 +17,7 @@ import Header from "../layout/Header";
 import { useMessage } from "../message/MessageContext";
 import ChildrenForm from "./participant/ChildrenForm";
 
-export default function CriarEvento() {
+export default function CreateEvent() {
   // Get all state from context instead of props
   const {
     setView,
@@ -350,7 +350,7 @@ export default function CriarEvento() {
                   <button
                     onClick={() => {
                       setCreatedEvent(null);
-                      setView("evento");
+                      setView("event");
                     }}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >

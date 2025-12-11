@@ -25,15 +25,15 @@ export default function AppRouter() {
     switch (view) {
         case "home":
             return <EventHome />;
-        case "criar":
+        case "create":
             return <EventCreate />;
-        case "verificar-telefone":
+        case "verify-phone":
             return <EventPhoneVerification />;
-        case "evento":
+        case "event":
             return <EventParticipant />;
         case "admin":
             return <EventAdmin />;
-        case "resultado":
+        case "result":
             return <SecretSantaResults />;
         default:
             return <EventHome />;
