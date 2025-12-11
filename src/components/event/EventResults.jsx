@@ -11,14 +11,15 @@ export default function SecretSantaResults() {
     setAccessCode: updateAccessCode,
     accessedViaParticipantCode,
     currentUid,
+    setForceEditParticipant,
   } = useEvent();
 
   const verified = !!currentUid;
   const currentParticipant = currentEvent?.currentParticipant;
-  const participantAccessCode = currentParticipant?.codeAcesso || "";
-  const eventSuccessMessage =
-    currentEvent?.successMessage ||
-    (currentParticipant ? "Seu código de acesso" : null);
+  /*   const _participantAccessCode = currentParticipant?.codeAcesso || "";
+    const _eventSuccessMessage =
+      currentEvent?.successMessage ||
+      (currentParticipant ? "Seu código de acesso" : null); */
 
   // Find the participant corresponding to the drawn friend to display suggestions
   const getParticipantByName = (name) => {
@@ -155,48 +156,70 @@ export default function SecretSantaResults() {
             </div>
 
             {includeChildren && currentParticipant.children &&
-              currentParticipant.children.map((filho) => {
-                const childName =
-                  typeof filho === "string"
-                    ? filho
-                    : filho && filho.name
-                      ? filho.name
-                      : String(filho);
-                const childFriendName = normalizeName(
-                  currentEvent.draw[childName]
-                );
-                const childFriendObject = childFriendName
-                  ? getParticipantByName(childFriendName)
-                  : null;
-                const childFriendGift = childFriendObject?.gifts || [];
+              (currentParticipant.children || [])
+                .slice()
+                .sort((a, b) => {
+                  const nameA = typeof a === "string" ? a : a?.name || String(a);
+                  const nameB = typeof b === "string" ? b : b?.name || String(b);
+                  return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+                })
+                .map((filho) => {
+                  const childName =
+                    typeof filho === "string"
+                      ? filho
+                      : filho && filho.name
+                        ? filho.name
+                        : String(filho);
+                  const childFriendName = normalizeName(
+                    currentEvent.draw[childName]
+                  );
+                  const childFriendObject = childFriendName
+                    ? getParticipantByName(childFriendName)
+                    : null;
+                  const childFriendGift = childFriendObject?.gifts || [];
 
-                return (
-                  <div
-                    key={childName}
-                    className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4"
-                  >
-                    <p className="text-sm text-gray-600">
-                      Amigo secreto de <b>{childName}</b>:
-                    </p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {childFriendName}
-                    </p>
-                    {childFriendGift.length > 0 && (
-                      <div className="text-left">
-                        <p className="text-sm text-gray-700">
-                          Sugestões do amigo:
-                        </p>
-                        <ul className="list-disc list-inside text-sm text-gray-700">
-                          {childFriendGift.map((pres, i) => (
-                            <li key={i}>{pres}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  return (
+                    <div
+                      key={childName}
+                      className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4"
+                    >
+                      <p className="text-sm text-gray-600">
+                        Amigo secreto de <b>{childName}</b>:
+                      </p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {childFriendName}
+                      </p>
+                      {childFriendGift.length > 0 && (
+                        <div className="text-left">
+                          <p className="text-sm text-gray-700">
+                            Sugestões do amigo:
+                          </p>
+                          <ul className="list-disc list-inside text-sm text-gray-700">
+                            {childFriendGift.map((pres, i) => (
+                              <li key={i}>{pres}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
           </div>
+          {/* Allow participant to edit their gifts even after draw */}
+          {currentParticipant && (
+            <div>
+              <button
+                onClick={() => {
+                  // Ask context to force edit participant after draw
+                  setForceEditParticipant(true);
+                  setView("evento");
+                }}
+                className="w-full bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition"
+              >
+                Editar presentes
+              </button>
+            </div>
+          )}
         </div>
         <Footer />
       </div>

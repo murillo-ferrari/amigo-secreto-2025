@@ -102,24 +102,31 @@ export default function ParticipantListAdmin({
                                             </div>
                                         )}
                                         {participant.children && participant.children.length > 0 && (
-                                            <div className="mt-2">
+                                            <div className="pt-2">
                                                 <p className="text-md font-semibold text-gray-700">Filhos:</p>
                                                 <div className="pl-3 border-l-2 border-gray-200">
-                                                    {participant.children.map((child, idx) => {
-                                                        const name = typeof child === "string" ? child : child.name;
-                                                        const gifts = (typeof child !== "string" && child.gifts) ? child.gifts : [];
+                                                    {(participant.children || [])
+                                                        .slice()
+                                                        .sort((a, b) => {
+                                                            const aName = typeof a === 'string' ? a : a?.name || String(a);
+                                                            const bName = typeof b === 'string' ? b : b?.name || String(b);
+                                                            return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+                                                        })
+                                                        .map((child, idx) => {
+                                                            const name = typeof child === "string" ? child : child.name;
+                                                            const gifts = (typeof child !== "string" && child.gifts) ? child.gifts : [];
 
-                                                        return (
-                                                            <div key={idx}>
-                                                                <p className="text-md font-medium text-gray-800">{name}</p>
-                                                                {gifts.length > 0 && (
-                                                                    <p className="text-sm text-gray-500">
-                                                                        Sugestões: {gifts.join(", ")}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            return (
+                                                                <div key={idx}>
+                                                                    <p className="text-md font-medium text-gray-800">{name}</p>
+                                                                    {gifts.length > 0 && (
+                                                                        <p className="text-sm text-gray-500">
+                                                                            Sugestões: {gifts.join(", ")}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
                                                 </div>
                                             </div>
                                         )}
@@ -188,48 +195,55 @@ export default function ParticipantListAdmin({
                                             </p>
                                         </div>
                                         {participant.children &&
-                                            participant.children.map((child) => {
-                                                const childName =
-                                                    typeof child === "string"
-                                                        ? child
-                                                        : child && child.name
-                                                            ? child.name
-                                                            : String(child);
-                                                const recipient = safeName(
-                                                    currentEvent.draw?.[childName]
-                                                );
-                                                const key = `${participant.id}::child::${childName}`;
-                                                const isRevealed = !!revealed[key];
+                                            (participant.children || [])
+                                                .slice()
+                                                .sort((a, b) => {
+                                                    const aName = typeof a === 'string' ? a : a?.name || String(a);
+                                                    const bName = typeof b === 'string' ? b : b?.name || String(b);
+                                                    return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
+                                                })
+                                                .map((child) => {
+                                                    const childName =
+                                                        typeof child === "string"
+                                                            ? child
+                                                            : child && child.name
+                                                                ? child.name
+                                                                : String(child);
+                                                    const recipient = safeName(
+                                                        currentEvent.draw?.[childName]
+                                                    );
+                                                    const key = `${participant.id}::child::${childName}`;
+                                                    const isRevealed = !!revealed[key];
 
-                                                return (
-                                                    <div
-                                                        key={childName}
-                                                        className="flex justify-between items-center"
-                                                    >
-                                                        <p className="text-sm flex items-center gap-2">
-                                                            <strong>{childName}</strong> tirou
-                                                            <span
-                                                                className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
-                                                                aria-hidden={!isRevealed}
-                                                            >
-                                                                {isRevealed ? <strong>{recipient}</strong> : "—"}
-                                                            </span>
-                                                            <button
-                                                                onClick={() => toggleReveal(key)}
-                                                                title={isRevealed ? "Ocultar" : "Revelar"}
-                                                                className="text-gray-500 hover:text-gray-800"
-                                                                aria-pressed={isRevealed}
-                                                            >
-                                                                {isRevealed ? (
-                                                                    <EyeOff className="w-4 h-4" />
-                                                                ) : (
-                                                                    <Eye className="w-4 h-4" />
-                                                                )}
-                                                            </button>
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
+                                                    return (
+                                                        <div
+                                                            key={childName}
+                                                            className="flex justify-between items-center"
+                                                        >
+                                                            <p className="pl-3 text-sm flex items-center gap-2">
+                                                                <strong>{childName}</strong> tirou
+                                                                <span
+                                                                    className={`${isRevealed ? "text-gray-800" : "text-gray-400"}`}
+                                                                    aria-hidden={!isRevealed}
+                                                                >
+                                                                    {isRevealed ? <strong>{recipient}</strong> : "—"}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => toggleReveal(key)}
+                                                                    title={isRevealed ? "Ocultar" : "Revelar"}
+                                                                    className="text-gray-500 hover:text-gray-800"
+                                                                    aria-pressed={isRevealed}
+                                                                >
+                                                                    {isRevealed ? (
+                                                                        <EyeOff className="w-4 h-4" />
+                                                                    ) : (
+                                                                        <Eye className="w-4 h-4" />
+                                                                    )}
+                                                                </button>
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
                                     </div>
                                 )}
                             </div>

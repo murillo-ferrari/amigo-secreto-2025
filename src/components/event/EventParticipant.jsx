@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useEvent } from "../../context/EventContext";
 import firebaseStorage from "../../firebase";
 import {
@@ -41,6 +41,8 @@ export default function EventParticipant() {
     setPendingAdminEvent,
     accessedViaParticipantCode,
     setAccessedViaParticipantCode,
+    forceEditParticipant,
+    setForceEditParticipant,
     currentUid,
   } = useEvent();
 
@@ -48,6 +50,52 @@ export default function EventParticipant() {
   const [participantCode, updateParticipantCode] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [eventParticipantId, updateEventParticipantId] = useState("");
+  // Manage local editing state derived from context flag
+  const [editingAfterDraw, setEditingAfterDraw] = useState(!!forceEditParticipant);
+
+  useEffect(() => {
+    // Consume the context flag and clear it so it doesn't persist across views
+    if (forceEditParticipant && setForceEditParticipant) {
+      setForceEditParticipant(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When asked to force edit (from results) or when a participant is set on the event,
+  // prefill the registration form with the participant's existing data.
+  useEffect(() => {
+    const p = currentEvent?.currentParticipant;
+    if (!p) return;
+
+    // Only prefill when explicitly asked OR when fields are empty
+    if (forceEditParticipant || !participantName) {
+      updateParticipantName(p.name || "");
+
+      // Mobile phone may be obfuscated; try deobfuscating with known key
+      let phoneForDisplay = p.mobilePhone || "";
+      try {
+        if (isObfuscated(phoneForDisplay)) {
+          const key = (currentEvent?.code || "") + p.id;
+          const deob = deobfuscatePhone(phoneForDisplay, key);
+          phoneForDisplay = formatMobileNumber(deob);
+        } else {
+          phoneForDisplay = formatMobileNumber(phoneForDisplay);
+        }
+      } catch (err) {
+        console.warn("Failed to deobfuscate phone for participant prefill:", err);
+      }
+
+      updateParticipantPhone(phoneForDisplay || "");
+      updateParticipantsChildren(p.children || []);
+      updateGifts(p.gifts || []);
+
+      if (forceEditParticipant) {
+        setEditingAfterDraw(true);
+        if (setForceEditParticipant) setForceEditParticipant(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent?.currentParticipant, forceEditParticipant]);
 
   const eventParticipants = currentEvent?.participants || [];
   const message = useMessage();
@@ -237,6 +285,11 @@ export default function EventParticipant() {
     // Update local state to reflect the change (we keep the in-memory event object)
     updateCurrentEvent(updatedEvent);
     updateEventList({ ...eventList, [currentEvent.code]: updatedEvent });
+    // After updating participant info while in draw mode, return to results
+    if (updatedEvent.drawn) {
+      if (setForceEditParticipant) setForceEditParticipant(false);
+      updateView("resultado");
+    }
   };
 
   const clearParticipantForm = () => {
@@ -459,6 +512,11 @@ export default function EventParticipant() {
 
   const renderRegistrationForm = () => (
     <>
+      {isDrawComplete && editingAfterDraw && (
+        <div className="mb-2 text-sm text-gray-600">
+          Nota: <strong>Alterar sugestões de presentes não altera o resultado do sorteio já realizado.</strong>
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <label className="block text-sm font-medium text-gray-700">
           Seu Nome
@@ -474,7 +532,7 @@ export default function EventParticipant() {
 
       <div className="flex flex-col gap-2">
         <label className="block text-sm font-medium text-gray-700">
-          WhatsApp (com DDD)
+          Celular (com DDD)
         </label>
         <input
           type="tel"
@@ -540,6 +598,20 @@ export default function EventParticipant() {
       >
         {findExistingParticipant() ? "Atualizar Cadastro" : "Cadastrar"}
       </button>
+      {isDrawComplete && editingAfterDraw && (
+        <div className="pb-4 border-b">
+          <button
+            onClick={() => {
+              setEditingAfterDraw(false);
+              if (setForceEditParticipant) setForceEditParticipant(false);
+              updateView("resultado");
+            }}
+            className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 transition"
+          >
+            Cancelar edição
+          </button>
+        </div>
+      )}
 
       {currentEvent && !isDrawComplete && (
         <div>
@@ -574,14 +646,19 @@ export default function EventParticipant() {
 
   const renderParticipantListItem = (participant) => {
     const childrenList = includeChildren ? participant.children || [] : [];
+    const sortedChildrenList = (childrenList || []).slice().sort((a, b) => {
+      const nameA = typeof a === "string" ? a : a?.name || String(a);
+      const nameB = typeof b === "string" ? b : b?.name || String(b);
+      return nameA.localeCompare(nameB, undefined, { sensitivity: "base" });
+    });
 
     return (
       <li key={participant.id} className="font-medium text-sm text-gray-600">
         {participant.name}
 
-        {childrenList.length > 0 && (
+        {sortedChildrenList.length > 0 && (
           <ul className="list-[circle] pl-5 text-gray-600 font-normal">
-            {childrenList.map((child, i) => {
+            {sortedChildrenList.map((child, i) => {
               const childName = typeof child === "string" ? child : child.name;
               return <li key={i}>{childName}</li>;
             })}
@@ -608,6 +685,11 @@ export default function EventParticipant() {
           onChange={(e) =>
             updateEventParticipantId(formatMobileNumber(e.target.value))
           }
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              showParticipantResult();
+            }
+          }}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg"
         />
         <button
@@ -629,7 +711,7 @@ export default function EventParticipant() {
       );
     }
 
-    if (isDrawComplete) {
+    if (isDrawComplete && !editingAfterDraw) {
       return renderDrawCompletedView();
     }
 
@@ -646,7 +728,11 @@ export default function EventParticipant() {
       <div className="flex flex-col gap-4 max-w-md mx-auto">
         <Header />
         <button
-          onClick={() => updateView("home")}
+          onClick={() =>
+            updateView(
+              accessedViaParticipantCode && currentEvent?.drawn ? "resultado" : "home"
+            )
+          }
           className="text-left text-gray-600 hover:text-gray-800"
         >
           ← Voltar
@@ -697,10 +783,10 @@ export default function EventParticipant() {
               // Check if authenticated user owns any admin participant (fallback for older events)
               const isAdminParticipantOwner = (() => {
                 if (!currentUid) return false;
-                
+
                 // If active session exists, prioritize its admin status
                 if (currentEvent?.currentParticipant) {
-                   return currentEvent.currentParticipant.isAdmin;
+                  return currentEvent.currentParticipant.isAdmin;
                 }
 
                 // Otherwise, check if user owns any admin participant record
@@ -713,7 +799,7 @@ export default function EventParticipant() {
               // Logic: Prioritize active session context.
               // If a specific participant is logged in, trust their admin status.
               // Fallback to UID ownership only if no specific participant context exists.
-              const showAdminButton = currentEvent?.currentParticipant 
+              const showAdminButton = currentEvent?.currentParticipant
                 ? currentEvent.currentParticipant.isAdmin
                 : (isEventCreator || isAdminParticipantOwner);
 

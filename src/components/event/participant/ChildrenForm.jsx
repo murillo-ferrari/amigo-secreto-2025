@@ -90,72 +90,81 @@ export default function ChildrenForm({ childrenList, onUpdateChildren }) {
             </div>
 
             <div className="flex flex-col gap-2">
-                {childrenList.map((child, index) => {
-                    const childData = normalizeChild(child);
-                    return (
-                        <div
-                            key={index}
-                            className="flex flex-col gap-2 bg-white p-2 rounded border border-gray-200"
-                        >
-                            <div className="flex justify-between items-center">
-                                <span className="font-semibold text-red-800">
-                                    {childData.name}
-                                </span>
-                                <button
-                                    onClick={() => removeParticipantChild(index)}
-                                    className="text-gray-400 hover:text-red-500"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            <div className="flex flex-col gap-2 pl-2 border-l-2 border-red-100">
-                                <div className="flex gap-1">
-                                    <input
-                                        type="text"
-                                        placeholder={`Sugestão de presente para ${childData.name}`}
-                                        value={childrenNewGift[index] || ""}
-                                        onChange={(event) =>
-                                            setChildrenNewGift({
-                                                ...childrenNewGift,
-                                                [index]: event.target.value,
-                                            })
-                                        }
-                                        className="flex-1 min-w-0 px-3 py-1 text-sm border border-gray-300 rounded"
-                                        onKeyDown={(event) => {
-                                            if (event.key === "Enter") {
-                                                event.preventDefault();
-                                                addChildGift(index);
-                                            }
-                                        }}
-                                    />
+                {(() => {
+                    const indices = (childrenList || []).map((_, i) => i);
+                    const sortedIndices = indices.slice().sort((i, j) => {
+                        const a = normalizeChild(childrenList[i]).name.toLowerCase();
+                        const b = normalizeChild(childrenList[j]).name.toLowerCase();
+                        return a.localeCompare(b, undefined, { sensitivity: "base" });
+                    });
+                    return sortedIndices.map((index) => {
+                        const child = childrenList[index];
+                        const childData = normalizeChild(child);
+                        return (
+                            <div
+                                key={index}
+                                className="flex flex-col gap-2 bg-white p-2 rounded border border-gray-200"
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-red-800">
+                                        {childData.name}
+                                    </span>
                                     <button
-                                        onClick={() => addChildGift(index)}
-                                        className="text-red-500 hover:text-red-700 font-bold px-2 shrink-0"
+                                        onClick={() => removeParticipantChild(index)}
+                                        className="text-gray-400 hover:text-red-500"
                                     >
-                                        +
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
-                                <ul className="space-y-1">
-                                    {childData.gifts.map((gift, gIndex) => (
-                                        <li
-                                            key={gIndex}
-                                            className="text-sm text-gray-600 flex justify-between items-center bg-gray-50 px-2 py-1 rounded"
+
+                                <div className="flex flex-col gap-2 pl-2 border-l-2 border-red-100">
+                                    <div className="flex gap-1">
+                                        <input
+                                            type="text"
+                                            placeholder={`Sugestão de presente para ${childData.name}`}
+                                            value={childrenNewGift[index] || ""}
+                                            onChange={(event) =>
+                                                setChildrenNewGift({
+                                                    ...childrenNewGift,
+                                                    [index]: event.target.value,
+                                                })
+                                            }
+                                            className="flex-1 min-w-0 px-3 py-1 text-sm border border-gray-300 rounded"
+                                            onKeyDown={(event) => {
+                                                if (event.key === "Enter") {
+                                                    event.preventDefault();
+                                                    addChildGift(index);
+                                                }
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => addChildGift(index)}
+                                            className="text-red-500 hover:text-red-700 font-bold px-2 shrink-0"
                                         >
-                                            <span>{gift}</span>
-                                            <button
-                                                onClick={() => removeChildGift(index, gIndex)}
-                                                className="text-gray-400 hover:text-red-500"
+                                            +
+                                        </button>
+                                    </div>
+                                    <ul className="space-y-1">
+                                        {childData.gifts.map((gift, gIndex) => (
+                                            <li
+                                                key={gIndex}
+                                                className="text-sm text-gray-600 flex justify-between items-center bg-gray-50 px-2 py-1 rounded"
                                             >
-                                                ×
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
+                                                <span>{gift}</span>
+                                                <button
+                                                    onClick={() => removeChildGift(index, gIndex)}
+                                                    className="text-gray-400 hover:text-red-500"
+                                                >
+                                                    ×
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    });
+                })()}
             </div>
         </div>
     );

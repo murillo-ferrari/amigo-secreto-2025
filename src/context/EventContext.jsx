@@ -23,6 +23,7 @@ export const EventProvider = ({ children }) => {
     const [accessCode, setAccessCode] = useState("");
     const [pendingAdminEvent, setPendingAdminEvent] = useState(null);
     const [accessedViaParticipantCode, setAccessedViaParticipantCode] = useState(false);
+    const [forceEditParticipant, setForceEditParticipant] = useState(false);
     const [currentUid, setCurrentUid] = useState(null);
 
     // Participant form states (kept here for persistence across view switches if needed)
@@ -244,6 +245,8 @@ export const EventProvider = ({ children }) => {
         setPendingAdminEvent,
         accessedViaParticipantCode,
         setAccessedViaParticipantCode,
+        forceEditParticipant,
+        setForceEditParticipant,
         currentUid,
         participantName,
         setParticipantName,
