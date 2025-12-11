@@ -16,10 +16,6 @@ export default function SecretSantaResults() {
 
   const verified = !!currentUid;
   const currentParticipant = currentEvent?.currentParticipant;
-  /*   const _participantAccessCode = currentParticipant?.codeAcesso || "";
-    const _eventSuccessMessage =
-      currentEvent?.successMessage ||
-      (currentParticipant ? "Seu código de acesso" : null); */
 
   // Find the participant corresponding to the drawn friend to display suggestions
   const getParticipantByName = (name) => {
@@ -56,11 +52,6 @@ export default function SecretSantaResults() {
     : null;
   const frindGifts = friendObject?.gifts || [];
   const includeChildren = currentEvent?.includeChildrenOption ?? true;
-
-  /*   const enviarWhatsApp = (nome, amigo, celular) => {
-    const url = gerarLinkWhatsApp(nome, amigo, celular, eventoAtual.name, eventoAtual.suggestedValue);
-    window.open(url, '_blank');
-  }; */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-green-50 p-4">
@@ -152,7 +143,6 @@ export default function SecretSantaResults() {
                   </ul>
                 </div>
               )}
-              {/* Optional: share to WhatsApp button can be re-enabled here */}
             </div>
 
             {includeChildren && currentParticipant.children &&
