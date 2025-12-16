@@ -203,9 +203,16 @@ const createRecaptcha = async (
     if (parent) {
       const newContainer = document.createElement("div");
       newContainer.id = containerId;
-      newContainer.style.visibility = "hidden";
-      newContainer.style.height = "0";
-      newContainer.style.overflow = "hidden";
+      // Keep container visible for normal (checkbox) reCAPTCHA; hide when using invisible
+      if (size === "normal") {
+        newContainer.style.visibility = "visible";
+        newContainer.style.height = "auto";
+        newContainer.style.overflow = "visible";
+      } else {
+        newContainer.style.visibility = "hidden";
+        newContainer.style.height = "0";
+        newContainer.style.overflow = "hidden";
+      }
       parent.replaceChild(newContainer, container);
       container = newContainer;
       // console.log("Replaced container element for fresh reCAPTCHA");
@@ -225,13 +232,13 @@ const createRecaptcha = async (
     // Signature: new RecaptchaVerifier(auth, containerOrId, parameters)
     recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: size,
+      // Show badge inline for invisible (helps some environments)
+      badge: size === "invisible" ? "inline" : undefined,
       callback: () => {
         // reCAPTCHA solved - will proceed with signInWithPhoneNumber
-        // console.log("reCAPTCHA solved successfully");
       },
       "expired-callback": () => {
         // Response expired - ask user to solve reCAPTCHA again
-        // console.log("reCAPTCHA expired, need to re-verify");
       },
     });
 
@@ -344,16 +351,43 @@ const sendPhoneVerification = async (phone) => {
       phoneE164,
       recaptchaVerifier
     );
-    // console.log("Verification code sent successfully");
     return true;
   } catch (error) {
     console.error("sendPhoneVerification error:", error);
-    lastPhoneNumber = null;
-    lastConfirmationResult = null;
-
     // Reset reCAPTCHA on error as per Firebase documentation
     resetRecaptcha();
 
+    // If the error looks like a malformed/failed captcha token, try a single retry
+    // using a visible (normal) reCAPTCHA to recover from invisible-token MALFORMED cases.
+    const msg = (error && (error.message || "")).toString();
+    const code = (error && error.code) || "";
+    const isCaptchaError = code === "auth/captcha-check-failed" || msg.includes("CAPTCHA_CHECK_FAILED") || msg.includes("captcha");
+
+    if (isCaptchaError) {
+      try {
+        // Recreate a visible reCAPTCHA and retry once
+        await createRecaptcha("recaptcha-container", "normal");
+        if (!recaptchaVerifier) {
+          throw new Error("Failed to create fallback reCAPTCHA verifier");
+        }
+        lastConfirmationResult = await signInWithPhoneNumber(auth, phoneE164, recaptchaVerifier);
+        return true;
+      } catch (retryErr) {
+        console.error("Retry with visible reCAPTCHA failed:", retryErr);
+        lastPhoneNumber = null;
+        lastConfirmationResult = null;
+        resetRecaptcha();
+        // Augment error with actionable guidance
+        const e = new Error(
+          "Falha na verificação de reCAPTCHA. Verifique domínios autorizados no Firebase Auth e a configuração do reCAPTCHA Enterprise."
+        );
+        e.original = retryErr;
+        throw e;
+      }
+    }
+
+    lastPhoneNumber = null;
+    lastConfirmationResult = null;
     throw error;
   }
 };
